@@ -3121,6 +3121,49 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ===================================================
+   INSTANT ROLE SWITCH PILL (COACH ⟷ PLAYER)
+   =================================================== */
+.role-switch-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 13px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  background: rgba(255, 107, 0, 0.12);
+  border: 1px solid rgba(255, 107, 0, 0.35);
+  color: #ffedd5;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 14px rgba(255, 107, 0, 0.15);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.role-switch-pill:hover {
+  transform: translateY(-1.5px);
+  background: rgba(255, 107, 0, 0.22);
+  border-color: rgba(255, 107, 0, 0.6);
+  box-shadow: 0 6px 20px rgba(255, 107, 0, 0.3);
+}
+
+.role-switch-pill.player-mode {
+  background: rgba(0, 242, 254, 0.12);
+  border-color: rgba(0, 242, 254, 0.35);
+  color: #cffafe;
+  box-shadow: 0 4px 14px rgba(0, 242, 254, 0.15);
+}
+
+.role-switch-pill.player-mode:hover {
+  background: rgba(0, 242, 254, 0.22);
+  border-color: rgba(0, 242, 254, 0.6);
+  box-shadow: 0 6px 20px rgba(0, 242, 254, 0.3);
+}
+
+/* ===================================================
    FIREBASE REAL-TIME LIVE SYNC BADGE (GLASSMORPHIC)
    =================================================== */
 .firebase-live-badge {
@@ -3460,6 +3503,10 @@ h1, h2, h3, h4, h5, h6 {
     margin-left: auto;
     display: flex;
     align-items: center;
+  }
+  .role-switch-pill {
+    padding: 5px 10px;
+    font-size: 0.74rem;
   }
   .firebase-live-badge {
     padding: 5px 10px;

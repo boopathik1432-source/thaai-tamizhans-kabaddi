@@ -27,7 +27,21 @@ function initAuth() {
   populatePlayerLoginDropdown();
   
   const loginScreen = document.getElementById('loginScreen');
-  const savedSession = localStorage.getItem('thaai_tamizhans_auth_session');
+  let savedSession = localStorage.getItem('thaai_tamizhans_auth_session');
+  const isExplicitLogout = localStorage.getItem('thaai_tamizhans_logged_out') === 'true';
+
+  // Seamless Auto-Start: If opening fresh (e.g. Vercel Link), immediately open Coach Dashboard like localhost:8080!
+  if (!savedSession && !isExplicitLogout) {
+    const defaultSession = {
+      role: 'coach',
+      name: (appData.coachProfile && appData.coachProfile.name) ? appData.coachProfile.name : 'Coach Arun',
+      loginTime: Date.now()
+    };
+    try {
+      localStorage.setItem('thaai_tamizhans_auth_session', JSON.stringify(defaultSession));
+      savedSession = JSON.stringify(defaultSession);
+    } catch(e) {}
+  }
 
   if (savedSession) {
     try {
@@ -137,6 +151,7 @@ function handleAuthLogin(e, role) {
       loginTime: Date.now()
     };
     localStorage.setItem('thaai_tamizhans_auth_session', JSON.stringify(sessionData));
+    localStorage.removeItem('thaai_tamizhans_logged_out');
 
     if (loginScreen) loginScreen.classList.add('hidden');
     switchRole('coach');
@@ -160,6 +175,7 @@ function handleAuthLogin(e, role) {
       loginTime: Date.now()
     };
     localStorage.setItem('thaai_tamizhans_auth_session', JSON.stringify(sessionData));
+    localStorage.removeItem('thaai_tamizhans_logged_out');
 
     appData.activePlayerId = player.id;
     if (loginScreen) loginScreen.classList.add('hidden');
@@ -170,6 +186,7 @@ function handleAuthLogin(e, role) {
 
 function quickLogin(role, targetPlayerId) {
   const loginScreen = document.getElementById('loginScreen');
+  localStorage.removeItem('thaai_tamizhans_logged_out');
 
   if (role === 'coach') {
     const sessionData = {
@@ -207,6 +224,7 @@ function quickLogin(role, targetPlayerId) {
 function handleUserLogout() {
   if (confirm('Are you sure you want to log out from தாய் தமிழன்ஸ் Portal?')) {
     localStorage.removeItem('thaai_tamizhans_auth_session');
+    localStorage.setItem('thaai_tamizhans_logged_out', 'true');
     
     const loginScreen = document.getElementById('loginScreen');
     if (loginScreen) {
@@ -1493,6 +1511,59 @@ function renderAppShell() {
     }
   }
 
+  updateRoleSwitchButton();
+}
+
+function quickSwitchRole() {
+  const isCoach = appData.activeRole === 'coach';
+  if (isCoach) {
+    const player = (appData.players && appData.players.find(p => p.name.toLowerCase().includes('boopathi'))) || (appData.players && appData.players[0]) || { id: 1, name: 'Arun', jersey: '#07' };
+    appData.activeRole = 'player';
+    appData.activePlayerId = player.id;
+    localStorage.setItem('thaai_tamizhans_auth_session', JSON.stringify({
+      role: 'player',
+      playerId: player.id,
+      name: player.name,
+      jersey: player.jersey,
+      loginTime: Date.now()
+    }));
+    switchRole('player');
+    showToast(`⚡ Switched to Player Portal: ${player.name} (${player.jersey})`, 'ri-run-line');
+  } else {
+    appData.activeRole = 'coach';
+    const coachName = (appData.coachProfile && appData.coachProfile.name) ? appData.coachProfile.name : 'Coach Arun';
+    localStorage.setItem('thaai_tamizhans_auth_session', JSON.stringify({
+      role: 'coach',
+      name: coachName,
+      loginTime: Date.now()
+    }));
+    switchRole('coach');
+    showToast(`⚡ Switched to Coach Portal: ${coachName}`, 'ri-shield-star-line');
+  }
+  updateRoleSwitchButton();
+}
+
+function updateRoleSwitchButton() {
+  const btn = document.getElementById('navRoleSwitchBtn');
+  const btnText = document.getElementById('navRoleSwitchText');
+  const btnIcon = document.querySelector('#navRoleSwitchBtn i');
+  if (!btn) return;
+  
+  if (appData.activeRole === 'coach') {
+    btn.classList.remove('player-mode');
+    if (btnText) btnText.textContent = 'Player View';
+    if (btnIcon) {
+      btnIcon.className = 'ri-run-line';
+      btnIcon.style.color = 'var(--accent-orange)';
+    }
+  } else {
+    btn.classList.add('player-mode');
+    if (btnText) btnText.textContent = 'Coach View';
+    if (btnIcon) {
+      btnIcon.className = 'ri-shield-star-line';
+      btnIcon.style.color = 'var(--accent-cyan)';
+    }
+  }
 }
 
 function toggleSidebar() {

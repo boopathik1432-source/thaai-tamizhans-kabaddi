@@ -163,6 +163,12 @@
       </div>
 
       <div class="top-actions">
+        <!-- Instant View Switcher: Coach ⟷ Player (1-Click) -->
+        <button type="button" class="role-switch-pill" id="navRoleSwitchBtn" onclick="quickSwitchRole()" title="Quick Switch: Coach ⟷ Player View">
+          <i class="ri-run-line" style="color:var(--accent-orange);"></i>
+          <span id="navRoleSwitchText">Player View</span>
+        </button>
+
         <!-- Live Cloud Sync Status Badge (Active on Laptop & Mobile) -->
         <div id="firebaseLiveBadge" class="firebase-live-badge status-live" onclick="if(window.FirebaseSync && window.FirebaseSync.forceSyncNow) window.FirebaseSync.forceSyncNow()" title="🔥 Live Cloud Sync: Click to force sync immediately">
           <span class="fb-dot pulse-green"></span>

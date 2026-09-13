@@ -178,7 +178,11 @@ window.FirebaseSync = {
         if (doc.exists) {
           const remote = doc.data();
           if (remote && remote.payload) {
-            this.applyRemoteData(remote.payload);
+            let p = remote.payload;
+            if (typeof p === 'string') {
+              try { p = JSON.parse(p); } catch (err) {}
+            }
+            this.applyRemoteData(p);
           }
         } else {
           console.log('📝 Initial cloud document not found. Auto-seeding all 11 collections...');
@@ -368,6 +372,10 @@ window.FirebaseSync = {
   // 4. APPLY REMOTE INCOMING DATA & REFRESH UI
   // ----------------------------------------------------
   applyRemoteData(incoming) {
+    if (!incoming) return;
+    if (typeof incoming === 'string') {
+      try { incoming = JSON.parse(incoming); } catch (e) {}
+    }
     if (!incoming || typeof incoming !== 'object') return;
 
     this.isRemoteUpdating = true;
