@@ -1,4 +1,7 @@
 {
+  "version": 2,
+  "name": "thaai-tamizhans",
+  "cleanUrls": true,
   "headers": [
     {
       "source": "/assets/(.*)",
@@ -9,7 +12,11 @@
         }
       ]
     }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
   ]
 }
-
-

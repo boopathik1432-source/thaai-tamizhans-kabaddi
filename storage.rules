@@ -1,27 +1,9 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    // Match notice posters
-    match /match-notices/{allPaths=**} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
-    }
-
-    // Vault files (strategy PDFs, training videos, photos)
-    match /vault-files/{allPaths=**} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
-    }
-
-    // Player avatars & cropped photos
-    match /player-avatars/{allPaths=**} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if request.resource.size < 50 * 1024 * 1024;
     }
   }
 }

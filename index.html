@@ -43,24 +43,27 @@
         <p style="font-size: 0.80rem; color: #94a3b8; margin-top: 4px;">Official Squad & Coach Portal</p>
       </div>
 
-      <!-- SINGLE UNIFIED LOGIN FORM (NO ROLE SWITCHING / TAB SELECTION) -->
-      <form id="formUnifiedLogin" onsubmit="handleAuthLogin(event)">
-        <div class="form-group">
-          <label style="display:flex; justify-content:space-between; align-items:center;">
-            <span><i class="ri-shield-user-line" style="color:var(--accent-orange);"></i> Login ID / தொலைபேசி / பெயர் / Jersey #</span>
-            <span style="font-size:0.70rem; color:var(--accent-gold); font-weight:700;"><i class="ri-sparkling-fill"></i> Auto Role Detect</span>
-          </label>
-          <input type="text" class="form-control" id="unifiedLoginId" placeholder="Coach Arun, 9876543210, Boopathi, #07, Bala..." required autocomplete="username" autofocus>
-          <div style="font-size:0.72rem; color:#94a3b8; margin-top:5px; line-height:1.4;">
-            💡 Coach ID போட்டால் Coach Portal-ம், Player ID/பெயர்/Jersey போட்டால் Player Portal-ம் தானாகவே திறக்கும்.
-          </div>
-        </div>
+      <!-- Role Selection Tabs -->
+      <div class="login-tabs-nav">
+        <button type="button" class="login-tab-btn active" id="tabLoginCoach" onclick="switchLoginTab('coach')">
+          <i class="ri-user-star-fill"></i> Coach Login
+        </button>
+        <button type="button" class="login-tab-btn" id="tabLoginPlayer" onclick="switchLoginTab('player')">
+          <i class="ri-run-fill"></i> Player Login
+        </button>
+      </div>
 
+      <!-- COACH LOGIN FORM -->
+      <form id="formCoachLogin" onsubmit="handleAuthLogin(event, 'coach')">
         <div class="form-group">
-          <label><i class="ri-lock-password-line" style="color:var(--accent-cyan);"></i> Security PIN / கடவுச்சொல்</label>
+          <label><i class="ri-user-settings-line"></i> Coach Username / தொலைபேசி எண்</label>
+          <input type="text" class="form-control" id="coachLoginUsername" value="Coach Arun" placeholder="e.g. Coach Arun or 9876543210" required>
+        </div>
+        <div class="form-group">
+          <label><i class="ri-lock-password-line"></i> Security PIN / கடவுச்சொல்</label>
           <div style="position:relative;">
-            <input type="password" class="form-control" id="unifiedLoginPin" value="1234" placeholder="Enter 4-digit PIN (default: 1234)" required style="padding-right: 40px;" autocomplete="current-password">
-            <button type="button" onclick="togglePasswordVisibility('unifiedLoginPin', this)" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:transparent; border:none; color:#94a3b8; cursor:pointer; font-size:1.1rem;" title="Show/Hide PIN">
+            <input type="password" class="form-control" id="coachLoginPin" value="1234" placeholder="Enter 4-digit PIN (default: 1234)" required style="padding-right: 40px;">
+            <button type="button" onclick="togglePasswordVisibility('coachLoginPin', this)" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:transparent; border:none; color:#94a3b8; cursor:pointer; font-size:1.1rem;">
               <i class="ri-eye-line"></i>
             </button>
           </div>
@@ -68,33 +71,65 @@
 
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; font-size:0.80rem;">
           <label style="display:flex; align-items:center; gap:6px; cursor:pointer; color:#cbd5e1; margin:0;">
-            <input type="checkbox" id="unifiedRememberMe" checked style="accent-color:var(--accent-orange);"> Remember Me
+            <input type="checkbox" id="coachRememberMe" checked style="accent-color:var(--accent-orange);"> Remember Me
           </label>
-          <span style="color:var(--accent-cyan); cursor:pointer;" onclick="showToast('Default PIN for all accounts is 1234', 'ri-key-fill')">Default PIN: <b>1234</b></span>
+          <span style="color:var(--accent-cyan); cursor:pointer;" onclick="showToast('Default PIN for all accounts is 1234', 'ri-key-fill')">Default PIN: 1234</span>
         </div>
 
-        <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:13px; font-size:0.96rem; font-weight:800; box-shadow:var(--theme-glow);">
-          <i class="ri-login-box-line"></i> Sign In / உள்நுழை
+        <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:12px; font-size:0.95rem; font-weight:800; box-shadow:var(--theme-glow);">
+          <i class="ri-login-box-line"></i> Sign In as Coach / பயிற்சியாளர் உள்நுழை
         </button>
 
-        <!-- Quick 1-Click Fast Instant Logins -->
+        <!-- Quick 1-Click Demo Coach Login -->
         <div class="quick-login-pills-wrap">
-          <div style="font-size:0.75rem; color:#94a3b8; font-weight:700; margin-bottom:8px; text-transform:uppercase;">⚡ Quick 1-Click Instant Login:</div>
-          <div class="quick-login-chip" onclick="quickLogin('coach')">
+          <div style="font-size:0.75rem; color:#94a3b8; font-weight:700; margin-bottom:8px; text-transform:uppercase;">⚡ Quick 1-Click Fast Login:</div>
+          <div class="quick-login-chip" onclick="quickLogin('coach', 0)">
             <span><i class="ri-shield-star-fill" style="color:var(--accent-orange);"></i> <b>Coach Arun</b> (Head Coach)</span>
-            <span style="color:var(--accent-orange); font-size:0.75rem; font-weight:800;">Coach Portal →</span>
+            <span style="color:var(--accent-cyan); font-size:0.75rem;">Instant Login →</span>
           </div>
-          <div class="quick-login-chip cyan" onclick="quickLogin('player', 'Boopathi')">
-            <span><i class="ri-user-star-fill" style="color:var(--accent-cyan);"></i> <b>Boopathi K</b> (Jersey #06 • All-Rounder)</span>
-            <span style="color:var(--accent-cyan); font-size:0.75rem; font-weight:800;">Player Portal →</span>
+        </div>
+      </form>
+
+      <!-- PLAYER LOGIN FORM -->
+      <form id="formPlayerLogin" onsubmit="handleAuthLogin(event, 'player')" style="display:none;">
+        <div class="form-group">
+          <label><i class="ri-user-smile-line"></i> Select Player / வீரரைத் தேர்வு செய்க</label>
+          <select class="form-control" id="playerLoginSelect" onchange="onPlayerLoginSelected(this.value)">
+            <!-- Dynamically populated with squad athletes -->
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label><i class="ri-lock-password-line"></i> Player PIN / கடவுச்சொல்</label>
+          <div style="position:relative;">
+            <input type="password" class="form-control" id="playerLoginPin" value="1234" placeholder="Enter 4-digit PIN (default: 1234)" required style="padding-right: 40px;">
+            <button type="button" onclick="togglePasswordVisibility('playerLoginPin', this)" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:transparent; border:none; color:#94a3b8; cursor:pointer; font-size:1.1rem;">
+              <i class="ri-eye-line"></i>
+            </button>
           </div>
-          <div class="quick-login-chip cyan" onclick="quickLogin('player', 'Arun')">
-            <span><i class="ri-run-fill" style="color:var(--accent-gold);"></i> <b>Arun</b> (Jersey #07 • Raider)</span>
-            <span style="color:var(--accent-cyan); font-size:0.75rem; font-weight:800;">Player Portal →</span>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; font-size:0.80rem;">
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; color:#cbd5e1; margin:0;">
+            <input type="checkbox" id="playerRememberMe" checked style="accent-color:var(--accent-cyan);"> Remember Me
+          </label>
+          <span style="color:var(--accent-cyan); cursor:pointer;" onclick="showToast('Default PIN for all players is 1234', 'ri-key-fill')">Default PIN: 1234</span>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:12px; font-size:0.95rem; font-weight:800; background:var(--grad-cyan); color:#000; box-shadow:0 0 20px rgba(0,242,254,0.4);">
+          <i class="ri-login-box-line"></i> Sign In as Player / வீரர் உள்நுழை
+        </button>
+
+        <!-- Quick 1-Click Demo Player Logins -->
+        <div class="quick-login-pills-wrap">
+          <div style="font-size:0.75rem; color:#94a3b8; font-weight:700; margin-bottom:8px; text-transform:uppercase;">⚡ Quick 1-Click Fast Login:</div>
+          <div class="quick-login-chip cyan" onclick="quickLogin('player', 6)">
+            <span><i class="ri-user-star-fill" style="color:var(--accent-cyan);"></i> <b>Boopathi K</b> (Jersey #06 - All-Rounder)</span>
+            <span style="color:var(--accent-cyan); font-size:0.75rem;">Login →</span>
           </div>
-          <div class="quick-login-chip cyan" onclick="quickLogin('player', 'Bala')">
-            <span><i class="ri-shield-user-fill" style="color:var(--accent-green);"></i> <b>Bala</b> (Jersey #03 • Defender)</span>
-            <span style="color:var(--accent-cyan); font-size:0.75rem; font-weight:800;">Player Portal →</span>
+          <div class="quick-login-chip cyan" onclick="quickLogin('player', 1)">
+            <span><i class="ri-run-fill" style="color:var(--accent-orange);"></i> <b>Arun</b> (Jersey #07 - Raider)</span>
+            <span style="color:var(--accent-cyan); font-size:0.75rem;">Login →</span>
           </div>
         </div>
       </form>
@@ -105,6 +140,17 @@
 
     <!-- TOP NAVBAR -->
     <header class="top-navbar">
+      <!-- Mobile Menu Toggle Button (Visible on screens <= 768px) -->
+      <button type="button" class="mobile-menu-toggle-btn" id="mobileMenuToggleBtn" onclick="toggleMobileDrawer()" title="Navigation Menu">
+        <i class="ri-menu-2-line"></i>
+      </button>
+
+      <!-- Brand icon/text on mobile navbar -->
+      <div class="mobile-nav-brand">
+        <img src="assets/kabaddi_logo.jpg" alt="Logo">
+        <span>தாய் தமிழன்ஸ்</span>
+      </div>
+
       <!-- Topbar Global Search Box -->
       <div class="topbar-search-wrap">
         <i class="ri-search-2-line search-icon"></i>
@@ -117,6 +163,12 @@
       </div>
 
       <div class="top-actions">
+        <!-- Live Cloud Sync Status Badge (Active on Laptop & Mobile) -->
+        <div id="firebaseLiveBadge" class="firebase-live-badge status-live" onclick="if(window.FirebaseSync && window.FirebaseSync.forceSyncNow) window.FirebaseSync.forceSyncNow()" title="🔥 Live Cloud Sync: Click to force sync immediately">
+          <span class="fb-dot pulse-green"></span>
+          <span class="fb-label">Live Cloud Sync</span>
+        </div>
+
         <!-- Theme Selector (10 Visual & 3D Animated Themes) -->
         <div class="theme-picker-wrap">
           <button class="theme-btn" id="themePickerBtn" onclick="toggleThemeMenu()" title="Theme Matru / Change Theme">
@@ -770,6 +822,66 @@
     </div>
   </div>
 
+  <!-- MOBILE BOTTOM NAVIGATION (Active on Mobile Phones <= 768px) -->
+  <nav class="mobile-bottom-nav" id="mobileBottomNav">
+    <button type="button" class="mobile-nav-btn active" id="mobNavHome" onclick="navigateTo(appData.activeRole === 'player' ? 'player-dashboard' : 'coach-dashboard')">
+      <i class="ri-home-5-line"></i>
+      <span>Home</span>
+    </button>
+    <button type="button" class="mobile-nav-btn" id="mobNavSquad" onclick="navigateTo('players')">
+      <i class="ri-team-line"></i>
+      <span>Squad</span>
+    </button>
+    <button type="button" class="mobile-nav-btn" id="mobNavPractice" onclick="navigateTo(appData.activeRole === 'player' ? 'my-practice' : 'practice')">
+      <i class="ri-calendar-check-line"></i>
+      <span>Practice</span>
+    </button>
+    <button type="button" class="mobile-nav-btn" id="mobNavMatches" onclick="navigateTo('match-notices')">
+      <i class="ri-trophy-line"></i>
+      <span>Matches</span>
+    </button>
+    <button type="button" class="mobile-nav-btn" id="mobNavMore" onclick="toggleMobileDrawer()">
+      <i class="ri-menu-4-line"></i>
+      <span>More</span>
+    </button>
+  </nav>
+
+  <!-- MOBILE SLIDE-OUT ACTION DRAWER -->
+  <div class="mobile-drawer-overlay" id="mobileDrawerOverlay" onclick="closeMobileDrawer()"></div>
+  <aside class="mobile-drawer" id="mobileDrawer">
+    <div class="mobile-drawer-header">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <img src="assets/kabaddi_logo.jpg" alt="Logo" style="width:36px; height:36px; border-radius:50%; border:2px solid var(--accent-orange);">
+        <div>
+          <div style="font-weight:900; font-size:0.95rem; color:var(--text-main);">தாய் தமிழன்ஸ்</div>
+          <div style="font-size:0.72rem; color:var(--accent-gold); font-weight:700;">KABADDI CLUB</div>
+        </div>
+      </div>
+      <button type="button" class="mobile-drawer-close" onclick="closeMobileDrawer()"><i class="ri-close-line"></i></button>
+    </div>
+
+    <!-- Live Sync Status Banner in Mobile Drawer -->
+    <div class="mobile-drawer-sync-banner" onclick="if(window.FirebaseSync && window.FirebaseSync.forceSyncNow) window.FirebaseSync.forceSyncNow()">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="fb-dot pulse-green"></span>
+        <span style="font-size:0.8rem; font-weight:700; color:#a7f3d0;">Live Cloud Sync Active</span>
+      </div>
+      <span style="font-size:0.72rem; color:var(--accent-cyan); font-weight:700;">Sync Now ⟳</span>
+    </div>
+
+    <div class="mobile-drawer-nav-list" id="mobileDrawerNavList">
+      <!-- Populated dynamically based on role -->
+    </div>
+  </aside>
+
+  <!-- Firebase Core SDKs (Compat version for guaranteed mobile & desktop browser support) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-service.js"></script>
   <script src="js/data.js"></script>
   <script src="js/app.js"></script>
 </body>

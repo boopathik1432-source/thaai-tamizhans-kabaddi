@@ -81,24 +81,22 @@ function populatePlayerLoginDropdown() {
 }
 
 function switchLoginTab(role) {
-  // Maintained for backward compatibility; single unified login form is now used
   const tabCoach = document.getElementById('tabLoginCoach');
   const tabPlayer = document.getElementById('tabLoginPlayer');
   const formCoach = document.getElementById('formCoachLogin');
   const formPlayer = document.getElementById('formPlayerLogin');
 
-  if (tabCoach && tabPlayer) {
-    if (role === 'coach') {
-      tabCoach.classList.add('active');
-      tabPlayer.classList.remove('active');
-      if (formCoach) formCoach.style.display = 'block';
-      if (formPlayer) formPlayer.style.display = 'none';
-    } else {
-      tabPlayer.classList.add('active');
-      tabCoach.classList.remove('active');
-      if (formPlayer) formPlayer.style.display = 'block';
-      if (formCoach) formCoach.style.display = 'none';
-    }
+  if (role === 'coach') {
+    if (tabCoach) tabCoach.classList.add('active');
+    if (tabPlayer) tabPlayer.classList.remove('active');
+    if (formCoach) formCoach.style.display = 'block';
+    if (formPlayer) formPlayer.style.display = 'none';
+  } else {
+    if (tabPlayer) tabPlayer.classList.add('active');
+    if (tabCoach) tabCoach.classList.remove('active');
+    if (formPlayer) formPlayer.style.display = 'block';
+    if (formCoach) formCoach.style.display = 'none';
+    populatePlayerLoginDropdown();
   }
 }
 
@@ -116,134 +114,44 @@ function togglePasswordVisibility(inputId, btnEl) {
 }
 
 function onPlayerLoginSelected(playerId) {
-  // Helper for custom player previews if needed
+  // Can be used for custom player hints or avatar previews if needed
 }
 
-// ----------------------------------------------------
-// SMART USER & ROLE DETECTION (COACH VS PLAYER IDENTIFIER)
-// ----------------------------------------------------
-function detectUserRoleAndIdentity(identifier) {
-  if (!identifier) return null;
-  const input = identifier.trim().toLowerCase();
-  const cleanDigits = identifier.replace(/[^0-9]/g, '');
-
-  const coachName = ((appData.coachProfile && appData.coachProfile.name) || 'Coach Arun').toLowerCase();
-  const coachPhone = ((appData.coachProfile && appData.coachProfile.phone) || '+91 98765 43210').replace(/[^0-9]/g, '');
-  const coachEmail = ((appData.coachProfile && appData.coachProfile.email) || 'coach.rajan@kabaddi.com').toLowerCase();
-
-  // 1. Check Coach match
-  const isCoach = 
-    input === 'coach' ||
-    input === 'admin' ||
-    input.startsWith('coach') ||
-    input.includes('coach') ||
-    input.includes('rajan') ||
-    input.includes('பயிற்சியாளர்') ||
-    input === coachName ||
-    coachName.includes(input) ||
-    (cleanDigits.length >= 7 && coachPhone.endsWith(cleanDigits)) ||
-    input === coachEmail;
-
-  // If matched coach keywords and does not conflict with a specific player's exact name
-  const exactPlayer = (appData.players || []).find(p => p.name.toLowerCase() === input);
-  if (isCoach && !exactPlayer) {
-    return { 
-      role: 'coach', 
-      name: (appData.coachProfile && appData.coachProfile.name) ? appData.coachProfile.name : 'Coach Arun' 
-    };
-  }
-
-  // 2. Check Player match
-  // a. Exact player name match
-  let matchedPlayer = (appData.players || []).find(p => p.name.toLowerCase() === input);
-
-  // b. Jersey number match (e.g. '#07', '07', '7', '#06', '6', '#03', '3')
-  if (!matchedPlayer && cleanDigits.length > 0 && cleanDigits.length <= 3) {
-    const jerseyNum = parseInt(cleanDigits, 10);
-    matchedPlayer = (appData.players || []).find(p => {
-      const pNum = parseInt(p.jersey.replace(/[^0-9]/g, ''), 10);
-      return pNum === jerseyNum;
-    });
-  }
-
-  // c. Phone / contact number match
-  if (!matchedPlayer && cleanDigits.length >= 7) {
-    matchedPlayer = (appData.players || []).find(p => {
-      const pDigits = p.contact ? p.contact.replace(/[^0-9]/g, '') : '';
-      return pDigits.endsWith(cleanDigits) || cleanDigits.endsWith(pDigits);
-    });
-  }
-
-  // d. Substring / partial name match
-  if (!matchedPlayer) {
-    matchedPlayer = (appData.players || []).find(p => 
-      p.name.toLowerCase().includes(input) || input.includes(p.name.toLowerCase())
-    );
-  }
-
-  // e. Fallback check for coach if player still not matched
-  if (!matchedPlayer && isCoach) {
-    return { 
-      role: 'coach', 
-      name: (appData.coachProfile && appData.coachProfile.name) ? appData.coachProfile.name : 'Coach Arun' 
-    };
-  }
-
-  // f. Special fallback for Boopathi if not yet loaded in players array
-  if (!matchedPlayer && input.includes('boopathi')) {
-    matchedPlayer = {
-      id: 6,
-      name: 'Boopathi K',
-      jersey: '#06',
-      position: 'All-Rounder',
-      status: 'Active-la Irukaru',
-      contact: '+91 99440 12345',
-      photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-      attendance: { present: 28, absent: 1, late: 0, percentage: 96 }
-    };
-    if (!appData.players) appData.players = [];
-    appData.players.push(matchedPlayer);
-    persistData();
-  }
-
-  if (matchedPlayer) {
-    return { role: 'player', player: matchedPlayer };
-  }
-
-  return null;
-}
-
-// ----------------------------------------------------
-// UNIFIED AUTHENTICATION & LOGIN HANDLER
-// ----------------------------------------------------
-function handleAuthLogin(e, forcedRole) {
+function handleAuthLogin(e, role) {
   if (e) e.preventDefault();
 
   const loginScreen = document.getElementById('loginScreen');
-  const idInput = document.getElementById('unifiedLoginId') || document.getElementById('coachLoginUsername');
-  const pinInput = document.getElementById('unifiedLoginPin') || document.getElementById('coachLoginPin') || document.getElementById('playerLoginPin');
 
-  const rawId = idInput ? idInput.value.trim() : '';
-  const pin = pinInput ? pinInput.value.trim() : '1234';
+  if (role === 'coach') {
+    const username = document.getElementById('coachLoginUsername')?.value.trim() || 'Coach Arun';
+    const pin = document.getElementById('coachLoginPin')?.value.trim();
 
-  // Backwards-compatible check if forcedRole is passed directly
-  if (forcedRole === 'coach') {
+    if (pin && pin !== '1234' && pin.length < 3) {
+      showToast('⚠️ Please enter valid 4-digit PIN (default: 1234)', 'ri-error-warning-line');
+      return;
+    }
+
     const sessionData = {
       role: 'coach',
-      name: (appData.coachProfile && appData.coachProfile.name) ? appData.coachProfile.name : 'Coach Arun',
+      name: username,
       loginTime: Date.now()
     };
     localStorage.setItem('thaai_tamizhans_auth_session', JSON.stringify(sessionData));
+
     if (loginScreen) loginScreen.classList.add('hidden');
     switchRole('coach');
-    showToast(`🎉 Welcome back, ${sessionData.name}! (தலைமை பயிற்சியாளர்)`);
-    return;
-  }
-
-  if (forcedRole === 'player') {
+    showToast(`🎉 Welcome back, ${username}! (தலைமை பயிற்சியாளர்)`);
+  } else {
     const playerSelect = document.getElementById('playerLoginSelect');
     const playerId = parseInt(playerSelect ? playerSelect.value : (appData.players[0] ? appData.players[0].id : 1));
     const player = appData.players.find(p => p.id === playerId) || appData.players[0];
+    const pin = document.getElementById('playerLoginPin')?.value.trim();
+
+    if (pin && pin !== '1234' && pin.length < 3) {
+      showToast('⚠️ Please enter valid 4-digit PIN (default: 1234)', 'ri-error-warning-line');
+      return;
+    }
+
     const sessionData = {
       role: 'player',
       playerId: player.id,
@@ -252,105 +160,33 @@ function handleAuthLogin(e, forcedRole) {
       loginTime: Date.now()
     };
     localStorage.setItem('thaai_tamizhans_auth_session', JSON.stringify(sessionData));
+
     appData.activePlayerId = player.id;
     if (loginScreen) loginScreen.classList.add('hidden');
     switchRole('player');
     showToast(`🎉 Welcome, ${player.name} (Jersey #${player.jersey})!`);
-    return;
-  }
-
-  // Validate Input
-  if (!rawId) {
-    showToast('⚠️ தயவுசெய்து உங்கள் Login ID அல்லது பெயரை உள்ளிடவும்', 'ri-error-warning-line');
-    if (idInput) idInput.focus();
-    return;
-  }
-
-  // Validate Security PIN (default is 1234)
-  if (pin && pin !== '1234' && pin.length < 3) {
-    showToast('⚠️ தவறான PIN! (Default PIN: 1234)', 'ri-error-warning-line');
-    if (pinInput) pinInput.focus();
-    return;
-  }
-
-  // Detect whether it's Coach or Player automatically
-  const detected = detectUserRoleAndIdentity(rawId);
-
-  if (!detected) {
-    showToast('⚠️ பயனர் அடையாளம் காணப்படவில்லை (User not found). Coach-க்கு "Coach Arun" அல்லது வீரருக்கு பெயர்/Jersey (எ.கா: Boopathi, Arun, #07, Bala) உள்ளிடவும்.', 'ri-error-warning-line');
-    return;
-  }
-
-  if (detected.role === 'coach') {
-    const coachName = detected.name || (appData.coachProfile && appData.coachProfile.name) || 'Coach Arun';
-    const sessionData = {
-      role: 'coach',
-      name: coachName,
-      loginTime: Date.now()
-    };
-    localStorage.setItem('thaai_tamizhans_auth_session', JSON.stringify(sessionData));
-
-    if (loginScreen) loginScreen.classList.add('hidden');
-    switchRole('coach');
-    showToast(`🎉 வணக்கம் ${coachName}! (பயிற்சியாளர் Portal திறக்கப்பட்டது)`);
-  } else if (detected.role === 'player') {
-    const player = detected.player;
-    const sessionData = {
-      role: 'player',
-      playerId: player.id,
-      name: player.name,
-      jersey: player.jersey,
-      loginTime: Date.now()
-    };
-    localStorage.setItem('thaai_tamizhans_auth_session', JSON.stringify(sessionData));
-
-    appData.activePlayerId = player.id;
-    if (loginScreen) loginScreen.classList.add('hidden');
-    switchRole('player');
-    showToast(`🎉 வணக்கம் ${player.name} (Jersey #${player.jersey})! (வீரர் Portal திறக்கப்பட்டது)`);
   }
 }
 
-// ----------------------------------------------------
-// QUICK 1-CLICK INSTANT FAST LOGIN
-// ----------------------------------------------------
-function quickLogin(role, targetIdentifier) {
+function quickLogin(role, targetPlayerId) {
   const loginScreen = document.getElementById('loginScreen');
-  const idInput = document.getElementById('unifiedLoginId');
-  const pinInput = document.getElementById('unifiedLoginPin');
 
   if (role === 'coach') {
-    const coachName = (appData.coachProfile && appData.coachProfile.name) || 'Coach Arun';
-    if (idInput) idInput.value = coachName;
-    if (pinInput) pinInput.value = '1234';
-
     const sessionData = {
       role: 'coach',
-      name: coachName,
+      name: 'Coach Arun',
       loginTime: Date.now()
     };
     localStorage.setItem('thaai_tamizhans_auth_session', JSON.stringify(sessionData));
 
     if (loginScreen) loginScreen.classList.add('hidden');
     switchRole('coach');
-    showToast(`⚡ Instant Login: ${coachName} (Coach Portal)!`);
+    showToast('⚡ Quick Login Successful: Logged in as Head Coach Arun!');
   } else {
-    let player = null;
-    if (typeof targetIdentifier === 'number') {
-      player = (appData.players || []).find(p => p.id === targetIdentifier);
-    } else if (typeof targetIdentifier === 'string') {
-      const match = detectUserRoleAndIdentity(targetIdentifier);
-      if (match && match.player) player = match.player;
-    }
-
+    let player = appData.players.find(p => p.id === targetPlayerId);
     if (!player) {
-      player = (appData.players && appData.players.length > 0) ? appData.players[0] : {
-        id: 1, name: 'Arun', jersey: '#07'
-      };
+      player = appData.players[0];
     }
-
-    if (idInput) idInput.value = player.name;
-    if (pinInput) pinInput.value = '1234';
 
     const sessionData = {
       role: 'player',
@@ -364,24 +200,19 @@ function quickLogin(role, targetIdentifier) {
     appData.activePlayerId = player.id;
     if (loginScreen) loginScreen.classList.add('hidden');
     switchRole('player');
-    showToast(`⚡ Instant Login: ${player.name} (Jersey #${player.jersey} • Player Portal)!`);
+    showToast(`⚡ Quick Login: Welcome, ${player.name} (Jersey #${player.jersey})!`);
   }
 }
 
-// ----------------------------------------------------
-// USER LOGOUT HANDLER
-// ----------------------------------------------------
 function handleUserLogout() {
-  if (confirm('Are you sure you want to log out from தாய் தமிழன்ஸ் Portal? (வெளியேற வேண்டுமா?)')) {
+  if (confirm('Are you sure you want to log out from தாய் தமிழன்ஸ் Portal?')) {
     localStorage.removeItem('thaai_tamizhans_auth_session');
     
     const loginScreen = document.getElementById('loginScreen');
     if (loginScreen) {
       loginScreen.classList.remove('hidden');
-      const idInput = document.getElementById('unifiedLoginId');
-      const pinInput = document.getElementById('unifiedLoginPin');
-      if (idInput) idInput.value = '';
-      if (pinInput) pinInput.value = '1234';
+      switchLoginTab(appData.activeRole || 'coach');
+      populatePlayerLoginDropdown();
     }
     showToast('👋 Logged out successfully! Sign in to continue.', 'ri-logout-circle-line');
   }
@@ -1655,9 +1486,137 @@ function renderAppShell() {
     const topName = document.getElementById('topUserName');
     const topRole = document.getElementById('topUserRole');
     const topAvatar = document.getElementById('topUserAvatar');
-    if (topName) topName.innerText = `${activePlayer.name} (${activePlayer.jersey})`;
-    if (topRole) topRole.innerText = `${activePlayer.position}`;
-    if (topAvatar) topAvatar.src = activePlayer.photo;
+    if (activePlayer) {
+      if (topName) topName.innerText = `${activePlayer.name} (${activePlayer.jersey})`;
+      if (topRole) topRole.innerText = `${activePlayer.position}`;
+      if (topAvatar) topAvatar.src = activePlayer.photo || 'assets/thaai_tamizhans_logo.jpg';
+    }
+  }
+
+  // Render Mobile Drawer Menu according to active role
+  renderMobileDrawerNav();
+}
+
+function toggleMobileDrawer() {
+  const drawer = document.getElementById('mobileDrawer');
+  const overlay = document.getElementById('mobileDrawerOverlay');
+  if (drawer && overlay) {
+    const isActive = drawer.classList.contains('active');
+    if (isActive) {
+      closeMobileDrawer();
+    } else {
+      drawer.classList.add('active');
+      overlay.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+  }
+}
+
+function closeMobileDrawer() {
+  const drawer = document.getElementById('mobileDrawer');
+  const overlay = document.getElementById('mobileDrawerOverlay');
+  if (drawer) drawer.classList.remove('active');
+  if (overlay) overlay.classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function renderMobileDrawerNav() {
+  const container = document.getElementById('mobileDrawerNavList');
+  if (!container) return;
+
+  const isCoach = appData.activeRole === 'coach';
+
+  if (isCoach) {
+    container.innerHTML = `
+      <div class="mobile-drawer-section-title">Core Modules</div>
+      <div class="mobile-drawer-item ${currentView === 'coach-dashboard' ? 'active' : ''}" onclick="navigateTo('coach-dashboard')">
+        <i class="ri-dashboard-3-line"></i> <span>Dashboard (முகப்பு)</span>
+      </div>
+      <div class="mobile-drawer-item ${currentView === 'players' ? 'active' : ''}" onclick="navigateTo('players')">
+        <i class="ri-team-line"></i> <span>Squad Roster (அணி வீரர்கள்)</span>
+      </div>
+      <div class="mobile-drawer-item ${currentView === 'practice' ? 'active' : ''}" onclick="navigateTo('practice')">
+        <i class="ri-calendar-check-line"></i> <span>Practice Schedule (பயிற்சி)</span>
+      </div>
+      <div class="mobile-drawer-item ${currentView === 'match-notices' ? 'active' : ''}" onclick="navigateTo('match-notices')">
+        <i class="ri-trophy-line"></i> <span>Match Notices (போட்டி அறிவிப்பு)</span>
+      </div>
+      <div class="mobile-drawer-item ${currentView === 'attendance' ? 'active' : ''}" onclick="navigateTo('attendance')">
+        <i class="ri-checkbox-circle-line"></i> <span>Daily Attendance (வருகைப் பதிவு)</span>
+      </div>
+      <div class="mobile-drawer-item ${currentView === 'performance' ? 'active' : ''}" onclick="navigateTo('performance')">
+        <i class="ri-line-chart-line"></i> <span>Performance Matrix (செயல்திறன்)</span>
+      </div>
+
+      <div class="mobile-drawer-section-title">Club & Media</div>
+      <div class="mobile-drawer-item ${currentView === 'vault' ? 'active' : ''}" onclick="navigateTo('vault')">
+        <i class="ri-folder-video-line"></i> <span>Strategy Vault & Videos</span>
+      </div>
+      <div class="mobile-drawer-item ${currentView === 'communication' ? 'active' : ''}" onclick="navigateTo('communication')">
+        <i class="ri-chat-voice-line"></i> <span>Announcements (அறிவிப்புகள்)</span>
+      </div>
+      <div class="mobile-drawer-item ${currentView === 'profile' ? 'active' : ''}" onclick="navigateTo('profile')">
+        <i class="ri-user-settings-line"></i> <span>Coach Profile (சுயவிவரம்)</span>
+      </div>
+
+      <div class="mobile-drawer-section-title">Actions</div>
+      <div class="mobile-drawer-item" onclick="toggleThemeMenu(); closeMobileDrawer();">
+        <i class="ri-palette-line" style="color:var(--accent-gold);"></i> <span>Change 3D Theme</span>
+      </div>
+      <div class="mobile-drawer-item" onclick="if(window.FirebaseSync) window.FirebaseSync.forceSyncNow(); closeMobileDrawer();">
+        <i class="ri-refresh-line" style="color:var(--accent-cyan);"></i> <span>Force Cloud Sync ⟳</span>
+      </div>
+      <div class="mobile-drawer-item" style="color:#f43f5e;" onclick="closeMobileDrawer(); handleUserLogout();">
+        <i class="ri-logout-box-r-line" style="color:#f43f5e;"></i> <span>Log Out (வெளியேறு)</span>
+      </div>
+    `;
+  } else {
+    container.innerHTML = `
+      <div class="mobile-drawer-section-title">Player Modules</div>
+      <div class="mobile-drawer-item ${currentView === 'player-dashboard' ? 'active' : ''}" onclick="navigateTo('player-dashboard')">
+        <i class="ri-home-5-line"></i> <span>Player Home (முகப்பு)</span>
+      </div>
+      <div class="mobile-drawer-item ${currentView === 'players' ? 'active' : ''}" onclick="navigateTo('players')">
+        <i class="ri-team-line"></i> <span>Squad Roster (அணி வீரர்கள்)</span>
+      </div>
+      <div class="mobile-drawer-item ${currentView === 'my-practice' ? 'active' : ''}" onclick="navigateTo('my-practice')">
+        <i class="ri-calendar-check-line"></i> <span>Today's Training (பயிற்சி)</span>
+      </div>
+      <div class="mobile-drawer-item ${currentView === 'match-notices' ? 'active' : ''}" onclick="navigateTo('match-notices')">
+        <i class="ri-trophy-line"></i> <span>Match Notices (போட்டிகள்)</span>
+      </div>
+      <div class="mobile-drawer-item ${currentView === 'my-instructions' ? 'active' : ''}" onclick="navigateTo('my-instructions')">
+        <i class="ri-file-list-3-line"></i> <span>Coach Instructions (அறிவுரைகள்)</span>
+      </div>
+      <div class="mobile-drawer-item ${currentView === 'my-attendance' ? 'active' : ''}" onclick="navigateTo('my-attendance')">
+        <i class="ri-checkbox-circle-line"></i> <span>My Attendance (வருகை)</span>
+      </div>
+      <div class="mobile-drawer-item ${currentView === 'my-performance' ? 'active' : ''}" onclick="navigateTo('my-performance')">
+        <i class="ri-line-chart-line"></i> <span>My Stats (செயல்திறன்)</span>
+      </div>
+
+      <div class="mobile-drawer-section-title">Club & Media</div>
+      <div class="mobile-drawer-item ${currentView === 'vault' ? 'active' : ''}" onclick="navigateTo('vault')">
+        <i class="ri-folder-video-line"></i> <span>Team Videos & Docs</span>
+      </div>
+      <div class="mobile-drawer-item ${currentView === 'communication' ? 'active' : ''}" onclick="navigateTo('communication')">
+        <i class="ri-chat-voice-line"></i> <span>Announcements</span>
+      </div>
+      <div class="mobile-drawer-item ${currentView === 'profile' ? 'active' : ''}" onclick="navigateTo('profile')">
+        <i class="ri-user-line"></i> <span>My Profile (சுயவிவரம்)</span>
+      </div>
+
+      <div class="mobile-drawer-section-title">Actions</div>
+      <div class="mobile-drawer-item" onclick="toggleThemeMenu(); closeMobileDrawer();">
+        <i class="ri-palette-line" style="color:var(--accent-gold);"></i> <span>Change 3D Theme</span>
+      </div>
+      <div class="mobile-drawer-item" onclick="if(window.FirebaseSync) window.FirebaseSync.forceSyncNow(); closeMobileDrawer();">
+        <i class="ri-refresh-line" style="color:var(--accent-cyan);"></i> <span>Force Cloud Sync ⟳</span>
+      </div>
+      <div class="mobile-drawer-item" style="color:#f43f5e;" onclick="closeMobileDrawer(); handleUserLogout();">
+        <i class="ri-logout-box-r-line" style="color:#f43f5e;"></i> <span>Log Out (வெளியேறு)</span>
+      </div>
+    `;
   }
 }
 
@@ -1674,6 +1633,28 @@ function navigateTo(viewKey) {
       btn.classList.add('active');
     }
   });
+
+  // Update Mobile Bottom Nav buttons
+  const mobButtons = document.querySelectorAll('.mobile-nav-btn');
+  mobButtons.forEach(btn => btn.classList.remove('active'));
+
+  if (viewKey === 'coach-dashboard' || viewKey === 'player-dashboard') {
+    document.getElementById('mobNavHome')?.classList.add('active');
+  } else if (viewKey === 'players') {
+    document.getElementById('mobNavSquad')?.classList.add('active');
+  } else if (viewKey === 'practice' || viewKey === 'my-practice') {
+    document.getElementById('mobNavPractice')?.classList.add('active');
+  } else if (viewKey === 'match-notices') {
+    document.getElementById('mobNavMatches')?.classList.add('active');
+  } else {
+    document.getElementById('mobNavMore')?.classList.add('active');
+  }
+
+  // Close drawer if open
+  closeMobileDrawer();
+
+  // Re-render mobile drawer to highlight current item
+  renderMobileDrawerNav();
 
   renderCurrentView();
   window.scrollTo({ top: 0, behavior: 'smooth' });

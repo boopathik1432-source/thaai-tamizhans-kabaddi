@@ -368,6 +368,11 @@ function saveAppData(data) {
       console.error('Critical storage error:', err);
     }
   }
+
+  // 🔥 INSTANT REAL-TIME CLOUD SYNC: Keeps Laptop & Mobile 100% In-Sync!
+  if (typeof window !== 'undefined' && window.FirebaseSync && typeof window.FirebaseSync.uploadData === 'function') {
+    window.FirebaseSync.uploadData(data);
+  }
 }
 
 
