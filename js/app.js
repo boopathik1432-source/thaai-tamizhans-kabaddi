@@ -1493,131 +1493,34 @@ function renderAppShell() {
     }
   }
 
-  // Render Mobile Drawer Menu according to active role
-  renderMobileDrawerNav();
 }
 
-function toggleMobileDrawer() {
-  const drawer = document.getElementById('mobileDrawer');
-  const overlay = document.getElementById('mobileDrawerOverlay');
-  if (drawer && overlay) {
-    const isActive = drawer.classList.contains('active');
-    if (isActive) {
-      closeMobileDrawer();
+function toggleSidebar() {
+  const isCoach = appData.activeRole === 'coach';
+  const activeSidebar = document.getElementById(isCoach ? 'coachSidebar' : 'playerSidebar');
+  const backdrop = document.getElementById('sidebarBackdrop');
+  
+  if (activeSidebar) {
+    const isOpen = activeSidebar.classList.contains('mobile-open');
+    if (isOpen) {
+      closeSidebar();
     } else {
-      drawer.classList.add('active');
-      overlay.classList.add('active');
+      activeSidebar.classList.add('mobile-open');
+      if (backdrop) backdrop.classList.add('active');
       document.body.style.overflow = 'hidden';
     }
   }
 }
 
-function closeMobileDrawer() {
-  const drawer = document.getElementById('mobileDrawer');
-  const overlay = document.getElementById('mobileDrawerOverlay');
-  if (drawer) drawer.classList.remove('active');
-  if (overlay) overlay.classList.remove('active');
+function closeSidebar() {
+  const coachSidebar = document.getElementById('coachSidebar');
+  const playerSidebar = document.getElementById('playerSidebar');
+  const backdrop = document.getElementById('sidebarBackdrop');
+
+  if (coachSidebar) coachSidebar.classList.remove('mobile-open');
+  if (playerSidebar) playerSidebar.classList.remove('mobile-open');
+  if (backdrop) backdrop.classList.remove('active');
   document.body.style.overflow = '';
-}
-
-function renderMobileDrawerNav() {
-  const container = document.getElementById('mobileDrawerNavList');
-  if (!container) return;
-
-  const isCoach = appData.activeRole === 'coach';
-
-  if (isCoach) {
-    container.innerHTML = `
-      <div class="mobile-drawer-section-title">Core Modules</div>
-      <div class="mobile-drawer-item ${currentView === 'coach-dashboard' ? 'active' : ''}" onclick="navigateTo('coach-dashboard')">
-        <i class="ri-dashboard-3-line"></i> <span>Dashboard (முகப்பு)</span>
-      </div>
-      <div class="mobile-drawer-item ${currentView === 'players' ? 'active' : ''}" onclick="navigateTo('players')">
-        <i class="ri-team-line"></i> <span>Squad Roster (அணி வீரர்கள்)</span>
-      </div>
-      <div class="mobile-drawer-item ${currentView === 'practice' ? 'active' : ''}" onclick="navigateTo('practice')">
-        <i class="ri-calendar-check-line"></i> <span>Practice Schedule (பயிற்சி)</span>
-      </div>
-      <div class="mobile-drawer-item ${currentView === 'match-notices' ? 'active' : ''}" onclick="navigateTo('match-notices')">
-        <i class="ri-trophy-line"></i> <span>Match Notices (போட்டி அறிவிப்பு)</span>
-      </div>
-      <div class="mobile-drawer-item ${currentView === 'attendance' ? 'active' : ''}" onclick="navigateTo('attendance')">
-        <i class="ri-checkbox-circle-line"></i> <span>Daily Attendance (வருகைப் பதிவு)</span>
-      </div>
-      <div class="mobile-drawer-item ${currentView === 'performance' ? 'active' : ''}" onclick="navigateTo('performance')">
-        <i class="ri-line-chart-line"></i> <span>Performance Matrix (செயல்திறன்)</span>
-      </div>
-
-      <div class="mobile-drawer-section-title">Club & Media</div>
-      <div class="mobile-drawer-item ${currentView === 'vault' ? 'active' : ''}" onclick="navigateTo('vault')">
-        <i class="ri-folder-video-line"></i> <span>Strategy Vault & Videos</span>
-      </div>
-      <div class="mobile-drawer-item ${currentView === 'communication' ? 'active' : ''}" onclick="navigateTo('communication')">
-        <i class="ri-chat-voice-line"></i> <span>Announcements (அறிவிப்புகள்)</span>
-      </div>
-      <div class="mobile-drawer-item ${currentView === 'profile' ? 'active' : ''}" onclick="navigateTo('profile')">
-        <i class="ri-user-settings-line"></i> <span>Coach Profile (சுயவிவரம்)</span>
-      </div>
-
-      <div class="mobile-drawer-section-title">Actions</div>
-      <div class="mobile-drawer-item" onclick="toggleThemeMenu(); closeMobileDrawer();">
-        <i class="ri-palette-line" style="color:var(--accent-gold);"></i> <span>Change 3D Theme</span>
-      </div>
-      <div class="mobile-drawer-item" onclick="if(window.FirebaseSync) window.FirebaseSync.forceSyncNow(); closeMobileDrawer();">
-        <i class="ri-refresh-line" style="color:var(--accent-cyan);"></i> <span>Force Cloud Sync ⟳</span>
-      </div>
-      <div class="mobile-drawer-item" style="color:#f43f5e;" onclick="closeMobileDrawer(); handleUserLogout();">
-        <i class="ri-logout-box-r-line" style="color:#f43f5e;"></i> <span>Log Out (வெளியேறு)</span>
-      </div>
-    `;
-  } else {
-    container.innerHTML = `
-      <div class="mobile-drawer-section-title">Player Modules</div>
-      <div class="mobile-drawer-item ${currentView === 'player-dashboard' ? 'active' : ''}" onclick="navigateTo('player-dashboard')">
-        <i class="ri-home-5-line"></i> <span>Player Home (முகப்பு)</span>
-      </div>
-      <div class="mobile-drawer-item ${currentView === 'players' ? 'active' : ''}" onclick="navigateTo('players')">
-        <i class="ri-team-line"></i> <span>Squad Roster (அணி வீரர்கள்)</span>
-      </div>
-      <div class="mobile-drawer-item ${currentView === 'my-practice' ? 'active' : ''}" onclick="navigateTo('my-practice')">
-        <i class="ri-calendar-check-line"></i> <span>Today's Training (பயிற்சி)</span>
-      </div>
-      <div class="mobile-drawer-item ${currentView === 'match-notices' ? 'active' : ''}" onclick="navigateTo('match-notices')">
-        <i class="ri-trophy-line"></i> <span>Match Notices (போட்டிகள்)</span>
-      </div>
-      <div class="mobile-drawer-item ${currentView === 'my-instructions' ? 'active' : ''}" onclick="navigateTo('my-instructions')">
-        <i class="ri-file-list-3-line"></i> <span>Coach Instructions (அறிவுரைகள்)</span>
-      </div>
-      <div class="mobile-drawer-item ${currentView === 'my-attendance' ? 'active' : ''}" onclick="navigateTo('my-attendance')">
-        <i class="ri-checkbox-circle-line"></i> <span>My Attendance (வருகை)</span>
-      </div>
-      <div class="mobile-drawer-item ${currentView === 'my-performance' ? 'active' : ''}" onclick="navigateTo('my-performance')">
-        <i class="ri-line-chart-line"></i> <span>My Stats (செயல்திறன்)</span>
-      </div>
-
-      <div class="mobile-drawer-section-title">Club & Media</div>
-      <div class="mobile-drawer-item ${currentView === 'vault' ? 'active' : ''}" onclick="navigateTo('vault')">
-        <i class="ri-folder-video-line"></i> <span>Team Videos & Docs</span>
-      </div>
-      <div class="mobile-drawer-item ${currentView === 'communication' ? 'active' : ''}" onclick="navigateTo('communication')">
-        <i class="ri-chat-voice-line"></i> <span>Announcements</span>
-      </div>
-      <div class="mobile-drawer-item ${currentView === 'profile' ? 'active' : ''}" onclick="navigateTo('profile')">
-        <i class="ri-user-line"></i> <span>My Profile (சுயவிவரம்)</span>
-      </div>
-
-      <div class="mobile-drawer-section-title">Actions</div>
-      <div class="mobile-drawer-item" onclick="toggleThemeMenu(); closeMobileDrawer();">
-        <i class="ri-palette-line" style="color:var(--accent-gold);"></i> <span>Change 3D Theme</span>
-      </div>
-      <div class="mobile-drawer-item" onclick="if(window.FirebaseSync) window.FirebaseSync.forceSyncNow(); closeMobileDrawer();">
-        <i class="ri-refresh-line" style="color:var(--accent-cyan);"></i> <span>Force Cloud Sync ⟳</span>
-      </div>
-      <div class="mobile-drawer-item" style="color:#f43f5e;" onclick="closeMobileDrawer(); handleUserLogout();">
-        <i class="ri-logout-box-r-line" style="color:#f43f5e;"></i> <span>Log Out (வெளியேறு)</span>
-      </div>
-    `;
-  }
 }
 
 function navigateTo(viewKey) {
@@ -1634,27 +1537,8 @@ function navigateTo(viewKey) {
     }
   });
 
-  // Update Mobile Bottom Nav buttons
-  const mobButtons = document.querySelectorAll('.mobile-nav-btn');
-  mobButtons.forEach(btn => btn.classList.remove('active'));
-
-  if (viewKey === 'coach-dashboard' || viewKey === 'player-dashboard') {
-    document.getElementById('mobNavHome')?.classList.add('active');
-  } else if (viewKey === 'players') {
-    document.getElementById('mobNavSquad')?.classList.add('active');
-  } else if (viewKey === 'practice' || viewKey === 'my-practice') {
-    document.getElementById('mobNavPractice')?.classList.add('active');
-  } else if (viewKey === 'match-notices') {
-    document.getElementById('mobNavMatches')?.classList.add('active');
-  } else {
-    document.getElementById('mobNavMore')?.classList.add('active');
-  }
-
-  // Close drawer if open
-  closeMobileDrawer();
-
-  // Re-render mobile drawer to highlight current item
-  renderMobileDrawerNav();
+  // Close sidebar smoothly if open on mobile/tablet
+  closeSidebar();
 
   renderCurrentView();
   window.scrollTo({ top: 0, behavior: 'smooth' });

@@ -2514,18 +2514,88 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 700;
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
-  :root { --sidebar-width: 80px; }
-  .sidebar-brand-name, .nav-section-label, .nav-item span { display: none; }
-  .top-navbar { left: 80px; }
-  .main-content { margin-left: 80px; }
+/* Sidebar Backdrop for Mobile & Tablet */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1150;
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
-@media (max-width: 640px) {
-  :root { --sidebar-width: 0px; }
-  .sidebar { display: none; }
-  .top-navbar { left: 0; padding: 0 16px; }
-  .main-content { margin-left: 0; padding: 16px; }
+.sidebar-backdrop.active {
+  display: block;
+  opacity: 1;
+}
+
+.sidebar-toggle-btn {
+  display: none;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border);
+  color: var(--text-main);
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 1.3rem;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  margin-right: 10px;
+}
+.sidebar-toggle-btn:hover,
+.sidebar-toggle-btn:active {
+  background: rgba(255, 85, 0, 0.2);
+  border-color: var(--accent-orange);
+  color: #fff;
+  transform: scale(0.96);
+}
+
+/* ===================================================
+   UNIFIED RESPONSIVE BEHAVIOR (LAPTOP & MOBILE IDENTICAL)
+   =================================================== */
+@media (max-width: 1024px) {
+  .sidebar-toggle-btn {
+    display: flex !important;
+  }
+  .sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: -310px !important;
+    width: 290px !important;
+    max-width: 85vw !important;
+    height: 100vh !important;
+    z-index: 1200 !important;
+    box-shadow: 10px 0 50px rgba(0, 0, 0, 0.9) !important;
+    transition: left 0.32s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    display: flex !important;
+  }
+  .sidebar.mobile-open {
+    left: 0 !important;
+  }
+  /* NEVER hide brand names, labels, or menu text - Keep Laptop & Mobile IDENTICAL */
+  .sidebar-brand-name,
+  .sidebar-brand-sub,
+  .nav-section-label,
+  .nav-item span {
+    display: inline-block !important;
+  }
+  .sidebar-header {
+    display: flex !important;
+  }
+  .top-navbar {
+    left: 0 !important;
+    padding: 0 14px !important;
+  }
+  .main-content {
+    margin-left: 0 !important;
+    padding: 16px !important;
+    width: 100% !important;
+  }
 }
 
 /* ====================================================
@@ -3356,50 +3426,66 @@ h1, h2, h3, h4, h5, h6 {
   margin: 14px 0 8px 6px;
 }
 
-/* Screen Adaptations for Mobile Devices (<= 768px) */
+/* Screen Adaptations for Mobile & Tablet Devices (<= 768px) */
 @media (max-width: 768px) {
-  .mobile-menu-toggle-btn {
-    display: flex;
-  }
   .mobile-nav-brand {
     display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 6px;
   }
-  .mobile-bottom-nav {
-    display: flex;
+  .mobile-bottom-nav,
+  .mobile-drawer,
+  .mobile-drawer-overlay {
+    display: none !important; /* Hide mismatched extra bars - Laptop & Mobile use the SAME iconic Sidebar */
   }
   .main-content {
-    padding-bottom: 84px !important;
+    padding-bottom: 24px !important;
+  }
+  .top-navbar {
+    height: auto !important;
+    min-height: 60px !important;
+    padding: 8px 12px !important;
+    gap: 8px !important;
+    flex-wrap: wrap;
   }
   .topbar-search-wrap {
-    max-width: 170px;
+    order: 3;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-top: 4px;
   }
-  .topbar-search-input {
-    font-size: 0.78rem;
-    padding-left: 28px;
-  }
-  .firebase-live-badge .fb-label {
-    display: none;
+  .top-actions {
+    gap: 8px !important;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
   }
   .firebase-live-badge {
-    padding: 6px 9px;
+    padding: 5px 10px;
+    font-size: 0.74rem;
   }
-  .user-pill .user-name,
-  .user-pill #topUserRole {
-    display: none;
+  .firebase-live-badge .fb-label {
+    display: inline-block !important;
   }
   .user-pill {
-    padding: 3px;
-    background: transparent;
-    border: none;
+    padding: 4px 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+  }
+  .user-pill .user-name {
+    display: inline-block !important;
+    font-size: 0.8rem;
+    font-weight: 700;
   }
   #themePickerBtn span {
-    display: none;
-  }
-  #themePickerBtn {
-    padding: 8px 10px;
+    display: inline-block !important;
+    font-size: 0.76rem;
   }
   .login-card-3d {
-    width: 94%;
+    width: 95%;
+    max-width: 440px;
     padding: 24px 18px;
   }
 }

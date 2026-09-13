@@ -140,8 +140,8 @@
 
     <!-- TOP NAVBAR -->
     <header class="top-navbar">
-      <!-- Mobile Menu Toggle Button (Visible on screens <= 768px) -->
-      <button type="button" class="mobile-menu-toggle-btn" id="mobileMenuToggleBtn" onclick="toggleMobileDrawer()" title="Navigation Menu">
+      <!-- Sidebar Toggle Button (Visible on screens <= 1024px) -->
+      <button type="button" class="sidebar-toggle-btn" id="sidebarToggleBtn" onclick="toggleSidebar()" title="Navigation Sidebar">
         <i class="ri-menu-2-line"></i>
       </button>
 
@@ -274,6 +274,9 @@
         </div>
       </div>
     </header>
+
+    <!-- SIDEBAR BACKDROP (For Mobile / Tablet) -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 
     <!-- COACH SIDEBAR -->
     <aside class="sidebar" id="coachSidebar">
@@ -822,57 +825,7 @@
     </div>
   </div>
 
-  <!-- MOBILE BOTTOM NAVIGATION (Active on Mobile Phones <= 768px) -->
-  <nav class="mobile-bottom-nav" id="mobileBottomNav">
-    <button type="button" class="mobile-nav-btn active" id="mobNavHome" onclick="navigateTo(appData.activeRole === 'player' ? 'player-dashboard' : 'coach-dashboard')">
-      <i class="ri-home-5-line"></i>
-      <span>Home</span>
-    </button>
-    <button type="button" class="mobile-nav-btn" id="mobNavSquad" onclick="navigateTo('players')">
-      <i class="ri-team-line"></i>
-      <span>Squad</span>
-    </button>
-    <button type="button" class="mobile-nav-btn" id="mobNavPractice" onclick="navigateTo(appData.activeRole === 'player' ? 'my-practice' : 'practice')">
-      <i class="ri-calendar-check-line"></i>
-      <span>Practice</span>
-    </button>
-    <button type="button" class="mobile-nav-btn" id="mobNavMatches" onclick="navigateTo('match-notices')">
-      <i class="ri-trophy-line"></i>
-      <span>Matches</span>
-    </button>
-    <button type="button" class="mobile-nav-btn" id="mobNavMore" onclick="toggleMobileDrawer()">
-      <i class="ri-menu-4-line"></i>
-      <span>More</span>
-    </button>
-  </nav>
 
-  <!-- MOBILE SLIDE-OUT ACTION DRAWER -->
-  <div class="mobile-drawer-overlay" id="mobileDrawerOverlay" onclick="closeMobileDrawer()"></div>
-  <aside class="mobile-drawer" id="mobileDrawer">
-    <div class="mobile-drawer-header">
-      <div style="display:flex; align-items:center; gap:10px;">
-        <img src="assets/kabaddi_logo.jpg" alt="Logo" style="width:36px; height:36px; border-radius:50%; border:2px solid var(--accent-orange);">
-        <div>
-          <div style="font-weight:900; font-size:0.95rem; color:var(--text-main);">தாய் தமிழன்ஸ்</div>
-          <div style="font-size:0.72rem; color:var(--accent-gold); font-weight:700;">KABADDI CLUB</div>
-        </div>
-      </div>
-      <button type="button" class="mobile-drawer-close" onclick="closeMobileDrawer()"><i class="ri-close-line"></i></button>
-    </div>
-
-    <!-- Live Sync Status Banner in Mobile Drawer -->
-    <div class="mobile-drawer-sync-banner" onclick="if(window.FirebaseSync && window.FirebaseSync.forceSyncNow) window.FirebaseSync.forceSyncNow()">
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span class="fb-dot pulse-green"></span>
-        <span style="font-size:0.8rem; font-weight:700; color:#a7f3d0;">Live Cloud Sync Active</span>
-      </div>
-      <span style="font-size:0.72rem; color:var(--accent-cyan); font-weight:700;">Sync Now ⟳</span>
-    </div>
-
-    <div class="mobile-drawer-nav-list" id="mobileDrawerNavList">
-      <!-- Populated dynamically based on role -->
-    </div>
-  </aside>
 
   <!-- Firebase Core SDKs (Compat version for guaranteed mobile & desktop browser support) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
