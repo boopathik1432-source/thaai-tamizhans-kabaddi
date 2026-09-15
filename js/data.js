@@ -525,6 +525,11 @@ function saveAppData(data) {
     const jsonStr = JSON.stringify(clone);
     localStorage.setItem(KABADDI_STORAGE_KEY, jsonStr);
     localStorage.setItem('HOME_KABADDI_APP_DATA_TANGLISH_V1', jsonStr);
+
+    // Real-Time Cloud Broadcast to all connected devices
+    if (typeof window !== 'undefined' && window.FirebaseSync && typeof window.FirebaseSync.scheduleSync === 'function') {
+      window.FirebaseSync.scheduleSync(data);
+    }
   } catch (e) {
     console.warn('LocalStorage quota limit reached, saving lean data:', e);
     try {
@@ -547,6 +552,10 @@ function saveAppData(data) {
       const leanStr = JSON.stringify(lean);
       localStorage.setItem(KABADDI_STORAGE_KEY, leanStr);
       localStorage.setItem('HOME_KABADDI_APP_DATA_TANGLISH_V1', leanStr);
+
+      if (typeof window !== 'undefined' && window.FirebaseSync && typeof window.FirebaseSync.scheduleSync === 'function') {
+        window.FirebaseSync.scheduleSync(data);
+      }
     } catch (err) {
       console.error('Critical storage error:', err);
     }

@@ -5344,6 +5344,61 @@ function renderSettingsHTML() {
       </div>
     </div>
 
+    <!-- Firebase Real-Time Cloud Sync Card -->
+    <div class="glass-card" style="max-width:920px; margin-bottom:24px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+        <div>
+          <h3 style="font-size:1.15rem; font-weight:800; margin:0;" class="text-gradient-orange">
+            <i class="ri-cloud-line"></i> Firebase Real-Time Cloud Database Sync (நேரலை டேட்டா சின்க்)
+          </h3>
+          <p style="font-size:0.82rem; color:var(--text-muted); margin:4px 0 0 0;">
+            Mobile & Laptop Live Sync: Scores, attendance, practice routines and instructions sync automatically across all devices.
+          </p>
+        </div>
+        <div id="settingsSyncStatusPill">
+          ${(window.FirebaseSync && window.FirebaseSync.isConnected) 
+            ? '<span class="badge-role coach" style="background:rgba(0,255,136,0.15); border-color:#00ff88; color:#00ff88;"><i class="ri-check-double-line"></i> 🟢 Connected to Cloud</span>' 
+            : '<span class="badge-role player" style="background:rgba(250,204,21,0.15); border-color:#facc15; color:#facc15;"><i class="ri-wifi-off-line"></i> 💾 Local Cache Active</span>'}
+        </div>
+      </div>
+
+      <div style="background:rgba(0,0,0,0.25); border:1px solid var(--glass-border); border-radius:14px; padding:16px; margin-bottom:18px;">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:14px; font-size:0.82rem;">
+          <div>
+            <span style="color:#94a3b8;">Active Project ID:</span>
+            <div style="font-weight:800; color:var(--accent-cyan); font-size:0.95rem; margin-top:2px;">
+              ${(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.projectId) ? window.FIREBASE_CONFIG.projectId : 'thaai-tamizhans'}
+            </div>
+          </div>
+          <div>
+            <span style="color:#94a3b8;">Sync Engine:</span>
+            <div style="font-weight:800; color:#34d399; font-size:0.95rem; margin-top:2px;">
+              WebSocket onSnapshot (13 Collections)
+            </div>
+          </div>
+          <div>
+            <span style="color:#94a3b8;">Local Fallback:</span>
+            <div style="font-weight:800; color:#fbbf24; font-size:0.95rem; margin-top:2px;">
+              IndexedDB & LocalStorage Engine
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cloud Actions -->
+      <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+        <button type="button" class="btn btn-sm btn-orange" onclick="triggerCloudSyncNow()">
+          <i class="ri-upload-cloud-2-line"></i> ⚡ Push Squad Data to Cloud
+        </button>
+        <button type="button" class="btn btn-sm btn-outline" style="color:var(--accent-cyan); border-color:var(--accent-cyan);" onclick="triggerCloudSeed()">
+          <i class="ri-database-2-line"></i> 🔄 Re-seed Cloud Collections
+        </button>
+        <button type="button" class="btn btn-sm btn-outline" onclick="testCloudConnection()">
+          <i class="ri-wifi-line"></i> 🧪 Test Connection
+        </button>
+      </div>
+    </div>
+
     <!-- Security & Password -->
     <div class="glass-card" style="max-width:700px;">
       <h3 style="font-size:1rem; margin-bottom:16px;" class="text-gradient-cyan">Security & Password</h3>
@@ -5358,6 +5413,41 @@ function renderSettingsHTML() {
       <button class="btn btn-court btn-sm" onclick="showToast('Password updated!')">Update Password</button>
     </div>
   `;
+}
+
+function triggerCloudSyncNow() {
+  if (window.FirebaseSync && typeof window.FirebaseSync.forceSyncNow === 'function') {
+    window.FirebaseSync.forceSyncNow();
+    showToast('Pushing latest squad data to Firebase Cloud...', 'ri-upload-cloud-2-line');
+  } else {
+    showToast('Cloud Sync engine initializing...', 'ri-time-line');
+  }
+}
+
+function triggerCloudSeed() {
+  if (window.FirebaseSync && typeof window.FirebaseSync.seedAll11Collections === 'function') {
+    window.FirebaseSync.seedAll11Collections();
+    showToast('Seeding all 13 cloud collections with local data...', 'ri-database-2-line');
+  } else {
+    showToast('Cloud Sync engine initializing...', 'ri-time-line');
+  }
+}
+
+function testCloudConnection() {
+  if (window.FirebaseSync && window.FirebaseSync.db) {
+    showToast('Testing Firebase Cloud connection...', 'ri-wifi-line');
+    window.FirebaseSync.db.collection('thaai_tamizhans_club').doc('app_live_state').get()
+      .then(() => {
+        showToast('🟢 Cloud Connection Success! Firebase Firestore is live.', 'ri-checkbox-circle-fill');
+        window.FirebaseSync.updateBadge('live', 'Live Cloud Sync');
+      })
+      .catch((err) => {
+        console.warn('Connection test notice:', err.message);
+        showToast('⚠️ Cloud status: ' + err.message, 'ri-error-warning-line');
+      });
+  } else {
+    showToast('Firebase SDK offline or connecting...', 'ri-information-line');
+  }
 }
 
 function handleSendAnnouncement(e) {

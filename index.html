@@ -241,6 +241,12 @@
           </div>
         </div>
 
+        <!-- Real-Time Cloud Live Sync Badge -->
+        <div id="firebaseLiveBadge" class="firebase-live-badge status-offline" onclick="if(window.FirebaseSync && window.FirebaseSync.forceSyncNow) window.FirebaseSync.forceSyncNow()" title="🔥 Live Cloud Sync: Click to force sync immediately">
+          <span class="pulse-dot"></span>
+          <span class="badge-label">Connecting...</span>
+        </div>
+
         <!-- Notification Bell -->
         <div class="notification-bell-wrap">
           <button class="bell-btn" onclick="toggleNotifications()" title="Notifications">
@@ -992,6 +998,15 @@
       </div>
     </div>
   </div>
+
+  <!-- Firebase Real-Time Cloud SDK (Compat ES5/ES6) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-service.js"></script>
 
   <script src="js/data.js"></script>
   <script src="js/app.js"></script>

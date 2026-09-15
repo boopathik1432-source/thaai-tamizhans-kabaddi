@@ -5390,6 +5390,120 @@ h1, h2, h3, h4, h5, h6 {
   gap: 5px;
 }
 
+/* ===================================================
+   FIREBASE REAL-TIME CLOUD LIVE SYNC BADGE & WIDGETS
+   =================================================== */
+.firebase-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #e2e8f0;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35);
+  user-select: none;
+}
+
+.firebase-live-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+.firebase-live-badge .pulse-dot,
+.firebase-live-badge .fb-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+  display: inline-block;
+  transition: all 0.3s ease;
+}
+
+/* Status: Live */
+.firebase-live-badge.status-live {
+  background: rgba(0, 255, 136, 0.08);
+  border-color: rgba(0, 255, 136, 0.4);
+  color: #a7f3d0;
+}
+.firebase-live-badge.status-live .pulse-dot,
+.firebase-live-badge.status-live .fb-dot {
+  background: #00ff88;
+  box-shadow: 0 0 10px #00ff88, 0 0 18px rgba(0, 255, 136, 0.5);
+  animation: fbPulse 1.8s infinite;
+}
+.firebase-live-badge.status-live:hover {
+  border-color: #00ff88;
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+}
+
+/* Status: Connecting / Syncing */
+.firebase-live-badge.status-connecting,
+.firebase-live-badge.status-syncing {
+  background: rgba(0, 242, 254, 0.08);
+  border-color: rgba(0, 242, 254, 0.4);
+  color: #bae6fd;
+}
+.firebase-live-badge.status-connecting .pulse-dot,
+.firebase-live-badge.status-syncing .pulse-dot,
+.firebase-live-badge.status-connecting .fb-dot,
+.firebase-live-badge.status-syncing .fb-dot {
+  background: #00f2fe;
+  box-shadow: 0 0 10px #00f2fe, 0 0 16px rgba(0, 242, 254, 0.5);
+  animation: fbPulse 1.2s infinite;
+}
+
+/* Status: Warning / Offline / Error */
+.firebase-live-badge.status-warning {
+  background: rgba(250, 204, 21, 0.1);
+  border-color: rgba(250, 204, 21, 0.4);
+  color: #fef08a;
+}
+.firebase-live-badge.status-warning .pulse-dot {
+  background: #facc15;
+  box-shadow: 0 0 8px #facc15;
+}
+
+.firebase-live-badge.status-offline,
+.firebase-live-badge.status-error {
+  background: rgba(244, 63, 94, 0.1);
+  border-color: rgba(244, 63, 94, 0.35);
+  color: #fecdd3;
+}
+.firebase-live-badge.status-offline .pulse-dot,
+.firebase-live-badge.status-error .pulse-dot {
+  background: #f43f5e;
+  box-shadow: 0 0 8px #f43f5e;
+}
+
+@keyframes fbPulse {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.3); opacity: 1; filter: drop-shadow(0 0 6px currentColor); }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+@media (max-width: 768px) {
+  .firebase-live-badge {
+    padding: 5px 10px;
+    font-size: 0.72rem;
+  }
+  .firebase-live-badge .badge-label {
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+
 
 
 
