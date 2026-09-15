@@ -13,6 +13,20 @@ window.FirebaseSync = {
   unsubscribers: [],
   currentUser: null,
   
+  // Unique device identifier to distinguish mobile vs laptop
+  deviceId: (() => {
+    try {
+      let id = localStorage.getItem('thaai_tamizhans_device_id');
+      if (!id) {
+        id = 'dev_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+        localStorage.setItem('thaai_tamizhans_device_id', id);
+      }
+      return id;
+    } catch(e) {
+      return 'dev_' + Date.now();
+    }
+  })(),
+
   // Primary Master Collection & Document for Atomic Live Sync
   masterCollection: 'thaai_tamizhans_club',
   masterDocId: 'app_live_state',
@@ -424,6 +438,11 @@ window.FirebaseSync = {
     if (!remoteData || typeof remoteData !== 'object') return;
     if (typeof appData === 'undefined') return;
 
+    // Echo prevention: if this remote payload was pushed by THIS device, don't re-apply unless forced
+    if (!forceApply && remoteData._originDeviceId && remoteData._originDeviceId === this.deviceId) {
+      return;
+    }
+
     this.isRemoteUpdating = true;
     try {
       let hasChanges = forceApply;
@@ -528,14 +547,14 @@ window.FirebaseSync = {
       if (hasChanges) {
         this.saveQuietly();
         this.refreshActiveViews();
-        console.log('⚡ [Firebase Live] Remote state synchronized from cloud!');
+        console.log('⚡ [Firebase Live 2-Way] Remote state synchronized from cloud!');
       }
     } catch (err) {
       console.error('Error applying remote data:', err);
     } finally {
       setTimeout(() => {
         this.isRemoteUpdating = false;
-      }, 400);
+      }, 300);
     }
   },
 
@@ -543,6 +562,7 @@ window.FirebaseSync = {
     try {
       const clone = JSON.parse(JSON.stringify(appData));
       clone._updatedAt = Date.now();
+      clone._originDeviceId = this.deviceId;
       const str = JSON.stringify(clone);
       localStorage.setItem('HOME_KABADDI_APP_DATA_TANGLISH_V2', str);
       localStorage.setItem('HOME_KABADDI_APP_DATA_TANGLISH_V1', str);
@@ -564,30 +584,29 @@ window.FirebaseSync = {
     if (this.isRemoteUpdating) return;
     if (!this.isInitialized || !this.db) return;
 
-    // Guard: Only Coach or specific authorized action can overwrite the master squad state in the cloud.
-    // If a player device opens, it must NEVER overwrite the cloud with old cached squad data!
-    if (typeof appData !== 'undefined' && appData.activeRole === 'player') {
-      return;
-    }
-
     clearTimeout(this.debounceTimer);
     this.updateBadge('syncing', 'Syncing...');
 
     this.debounceTimer = setTimeout(() => {
       this.uploadDataImmediately(data);
-    }, 450);
+    }, 250);
   },
 
   async uploadDataImmediately(data) {
-    if (!this.db) return;
+    if (!this.db || this.isRemoteUpdating) return;
 
     try {
       const cleanClone = this.cleanForCloud(data);
+      const now = Date.now();
+      cleanClone._updatedAt = now;
+      cleanClone._originDeviceId = this.deviceId;
 
       // 1. Update Master Live Sync Doc
       const masterDoc = this.db.collection(this.masterCollection).doc(this.masterDocId);
       await masterDoc.set({
         payload: cleanClone,
+        _updatedAt: now,
+        _originDeviceId: this.deviceId,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         lastUpdatedBy: (typeof appData !== 'undefined' && appData.coachProfile) ? appData.coachProfile.name : 'Web App'
       }, { merge: true });
@@ -596,7 +615,7 @@ window.FirebaseSync = {
       this.syncIndividualCollections(cleanClone);
 
       this.updateBadge('live', 'Live Cloud Sync');
-      console.log('✅ [Firebase Live] All data successfully synced to Cloud Firestore!');
+      console.log('✅ [Firebase Live 2-Way] All data successfully synced to Cloud Firestore from device:', this.deviceId);
     } catch (error) {
       console.error('❌ Failed to write to Firestore:', error);
       if (error.code === 'permission-denied') {

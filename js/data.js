@@ -501,8 +501,9 @@ function getAppData() {
     }
   }
 
-  saveAppData(INITIAL_KABADDI_DATA);
-  return INITIAL_KABADDI_DATA;
+  const initialClone = JSON.parse(JSON.stringify(INITIAL_KABADDI_DATA));
+  initialClone._updatedAt = 0;
+  return initialClone;
 }
 
 function saveAppData(data) {
