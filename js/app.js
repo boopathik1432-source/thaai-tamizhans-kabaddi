@@ -5269,9 +5269,12 @@ function handleSaveProfile(e) {
   }
 
   persistData();
+  if (isCoach && window.FirebaseSync && typeof window.FirebaseSync.syncCoachProfile === 'function') {
+    window.FirebaseSync.syncCoachProfile(appData.coachProfile);
+  }
   renderAppShell();
   renderCurrentView();
-  showToast('Profile photo and details saved!');
+  showToast('Profile photo and details saved & synced live to cloud!');
 }
 
 function renderSettingsHTML() {
