@@ -92,15 +92,30 @@ window.FirebaseSync = {
       this.updateBadge('connecting', 'Connecting...');
       console.log('🔥 Firebase Initialized for தாய் தமிழன்ஸ் KABADDI CLUB (Project:', config.projectId, ')');
 
-      // Start all real-time listeners
+      // 1. Immediately force pull the freshest cloud snapshot on startup
+      this.forcePullFromCloud();
+
+      // 2. Start real-time listeners
       this.startAllRealtimeListeners();
 
-      // Tab visibility listener
-      document.addEventListener('visibilitychange', () => {
-        if (!document.hidden && this.isConnected) {
-          this.updateBadge('live', 'Live Cloud Sync');
+      // 3. Automatic re-sync whenever mobile wakes up, unlocks, or user switches back to browser tab
+      const handleVisibilityOrResume = () => {
+        if (!document.hidden) {
+          console.log('📱 App resumed / tab active: Checking cloud for fresh updates...');
+          this.forcePullFromCloud();
         }
-      });
+      };
+
+      document.addEventListener('visibilitychange', handleVisibilityOrResume);
+      window.addEventListener('focus', handleVisibilityOrResume);
+      window.addEventListener('pageshow', handleVisibilityOrResume);
+
+      // 4. Periodic background heartbeat every 20s to ensure mobile stays perfectly updated
+      setInterval(() => {
+        if (!document.hidden && this.isConnected) {
+          this.forcePullFromCloud();
+        }
+      }, 20000);
 
     } catch (error) {
       console.error('❌ Firebase Init Error:', error);
@@ -368,19 +383,54 @@ window.FirebaseSync = {
   },
 
   // ----------------------------------------------------
+  // 3.5 IMMEDIATE CLOUD PULL (Bypasses stale caches on mobile)
+  // ----------------------------------------------------
+  async forcePullFromCloud() {
+    if (!this.db) return false;
+    try {
+      const masterRef = this.db.collection(this.masterCollection).doc(this.masterDocId);
+      
+      // Force get from server directly so mobile gets fresh cloud changes immediately
+      let doc = null;
+      try {
+        doc = await masterRef.get({ source: 'server' });
+      } catch (err) {
+        doc = await masterRef.get();
+      }
+
+      if (doc && doc.exists) {
+        const remote = doc.data();
+        if (remote && remote.payload) {
+          let p = remote.payload;
+          if (typeof p === 'string') {
+            try { p = JSON.parse(p); } catch (err) {}
+          }
+          this.applyRemoteData(p, true);
+          this.isConnected = true;
+          this.updateBadge('live', 'Live Cloud Sync');
+          return true;
+        }
+      }
+    } catch (e) {
+      console.warn('forcePullFromCloud warning:', e.message);
+    }
+    return false;
+  },
+
+  // ----------------------------------------------------
   // 4. APPLY INCOMING REMOTE DATA (Atomic Master Doc)
   // ----------------------------------------------------
-  applyRemoteData(remoteData) {
+  applyRemoteData(remoteData, forceApply = false) {
     if (!remoteData || typeof remoteData !== 'object') return;
     if (typeof appData === 'undefined') return;
 
     this.isRemoteUpdating = true;
     try {
-      let hasChanges = false;
+      let hasChanges = forceApply;
 
       // Check and update players
       if (Array.isArray(remoteData.players) && remoteData.players.length > 0) {
-        if (JSON.stringify(appData.players) !== JSON.stringify(remoteData.players)) {
+        if (forceApply || JSON.stringify(appData.players) !== JSON.stringify(remoteData.players)) {
           appData.players = remoteData.players;
           hasChanges = true;
         }
@@ -388,7 +438,7 @@ window.FirebaseSync = {
 
       // Check and update liveMatch
       if (remoteData.liveMatch && typeof remoteData.liveMatch === 'object') {
-        if (JSON.stringify(appData.liveMatch) !== JSON.stringify(remoteData.liveMatch)) {
+        if (forceApply || JSON.stringify(appData.liveMatch) !== JSON.stringify(remoteData.liveMatch)) {
           appData.liveMatch = remoteData.liveMatch;
           hasChanges = true;
         }
@@ -396,7 +446,7 @@ window.FirebaseSync = {
 
       // Check and update scheduledMatches
       if (Array.isArray(remoteData.scheduledMatches)) {
-        if (JSON.stringify(appData.scheduledMatches) !== JSON.stringify(remoteData.scheduledMatches)) {
+        if (forceApply || JSON.stringify(appData.scheduledMatches) !== JSON.stringify(remoteData.scheduledMatches)) {
           appData.scheduledMatches = remoteData.scheduledMatches;
           hasChanges = true;
         }
@@ -404,7 +454,7 @@ window.FirebaseSync = {
 
       // Check and update todayPractice
       if (remoteData.todayPractice && typeof remoteData.todayPractice === 'object') {
-        if (JSON.stringify(appData.todayPractice) !== JSON.stringify(remoteData.todayPractice)) {
+        if (forceApply || JSON.stringify(appData.todayPractice) !== JSON.stringify(remoteData.todayPractice)) {
           appData.todayPractice = remoteData.todayPractice;
           hasChanges = true;
         }
@@ -412,7 +462,7 @@ window.FirebaseSync = {
 
       // Check and update practiceCalendar
       if (Array.isArray(remoteData.practiceCalendar)) {
-        if (JSON.stringify(appData.practiceCalendar) !== JSON.stringify(remoteData.practiceCalendar)) {
+        if (forceApply || JSON.stringify(appData.practiceCalendar) !== JSON.stringify(remoteData.practiceCalendar)) {
           appData.practiceCalendar = remoteData.practiceCalendar;
           hasChanges = true;
         }
@@ -420,7 +470,7 @@ window.FirebaseSync = {
 
       // Check and update instructions
       if (Array.isArray(remoteData.instructions)) {
-        if (JSON.stringify(appData.instructions) !== JSON.stringify(remoteData.instructions)) {
+        if (forceApply || JSON.stringify(appData.instructions) !== JSON.stringify(remoteData.instructions)) {
           appData.instructions = remoteData.instructions;
           hasChanges = true;
         }
@@ -428,7 +478,7 @@ window.FirebaseSync = {
 
       // Check and update matchNotices
       if (Array.isArray(remoteData.matchNotices)) {
-        if (JSON.stringify(appData.matchNotices) !== JSON.stringify(remoteData.matchNotices)) {
+        if (forceApply || JSON.stringify(appData.matchNotices) !== JSON.stringify(remoteData.matchNotices)) {
           appData.matchNotices = remoteData.matchNotices;
           hasChanges = true;
         }
@@ -436,7 +486,7 @@ window.FirebaseSync = {
 
       // Check and update attendance
       if (Array.isArray(remoteData.todayAttendance)) {
-        if (JSON.stringify(appData.todayAttendance) !== JSON.stringify(remoteData.todayAttendance)) {
+        if (forceApply || JSON.stringify(appData.todayAttendance) !== JSON.stringify(remoteData.todayAttendance)) {
           appData.todayAttendance = remoteData.todayAttendance;
           hasChanges = true;
         }
@@ -444,7 +494,7 @@ window.FirebaseSync = {
 
       // Check and update performance
       if (remoteData.performance && typeof remoteData.performance === 'object') {
-        if (JSON.stringify(appData.performance) !== JSON.stringify(remoteData.performance)) {
+        if (forceApply || JSON.stringify(appData.performance) !== JSON.stringify(remoteData.performance)) {
           appData.performance = remoteData.performance;
           hasChanges = true;
         }
@@ -452,7 +502,7 @@ window.FirebaseSync = {
 
       // Check and update messages / announcements
       if (Array.isArray(remoteData.messages)) {
-        if (JSON.stringify(appData.messages) !== JSON.stringify(remoteData.messages)) {
+        if (forceApply || JSON.stringify(appData.messages) !== JSON.stringify(remoteData.messages)) {
           appData.messages = remoteData.messages;
           hasChanges = true;
         }
@@ -460,8 +510,16 @@ window.FirebaseSync = {
 
       // Check and update notifications
       if (Array.isArray(remoteData.notifications)) {
-        if (JSON.stringify(appData.notifications) !== JSON.stringify(remoteData.notifications)) {
+        if (forceApply || JSON.stringify(appData.notifications) !== JSON.stringify(remoteData.notifications)) {
           appData.notifications = remoteData.notifications;
+          hasChanges = true;
+        }
+      }
+
+      // Check and update coachProfile
+      if (remoteData.coachProfile && typeof remoteData.coachProfile === 'object') {
+        if (forceApply || JSON.stringify(appData.coachProfile) !== JSON.stringify(remoteData.coachProfile)) {
+          appData.coachProfile = remoteData.coachProfile;
           hasChanges = true;
         }
       }
@@ -492,8 +550,11 @@ window.FirebaseSync = {
   },
 
   refreshActiveViews() {
+    if (typeof renderAppShell === 'function') renderAppShell();
     if (typeof renderCurrentView === 'function') renderCurrentView();
     if (typeof updateNotificationBadge === 'function') updateNotificationBadge();
+    if (typeof renderNotifications === 'function') renderNotifications();
+    if (typeof populatePlayerLoginDropdown === 'function') populatePlayerLoginDropdown();
   },
 
   // ----------------------------------------------------
@@ -502,6 +563,12 @@ window.FirebaseSync = {
   scheduleSync(data) {
     if (this.isRemoteUpdating) return;
     if (!this.isInitialized || !this.db) return;
+
+    // Guard: Only Coach or specific authorized action can overwrite the master squad state in the cloud.
+    // If a player device opens, it must NEVER overwrite the cloud with old cached squad data!
+    if (typeof appData !== 'undefined' && appData.activeRole === 'player') {
+      return;
+    }
 
     clearTimeout(this.debounceTimer);
     this.updateBadge('syncing', 'Syncing...');
