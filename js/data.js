@@ -5,9 +5,9 @@ const INITIAL_KABADDI_DATA = {
   activePlayerId: 1,   // Current player (Arun)
   
   coachProfile: {
-    name: 'Coach Arun',
+    name: 'Coach Rajan',
     phone: '+91 98765 43210',
-    email: 'coach.arun@kabaddi.com',
+    email: 'coach.rajan@kabaddi.com',
     experience: '12 Varuda Anubavam (Pro Kabaddi Certified Senior Coach)',
     photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80'
   },
@@ -62,16 +62,6 @@ const INITIAL_KABADDI_DATA = {
       contact: '+91 95432 10987',
       photo: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=300&q=80',
       attendance: { present: 27, absent: 2, late: 0, percentage: 93 }
-    },
-    {
-      id: 6,
-      name: 'Boopathi K',
-      jersey: '#06',
-      position: 'All-Rounder',
-      status: 'Active-la Irukaru',
-      contact: '+91 99440 12345',
-      photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-      attendance: { present: 28, absent: 1, late: 0, percentage: 96 }
     }
   ],
 
@@ -290,48 +280,236 @@ const INITIAL_KABADDI_DATA = {
       read: false,
       readByPlayers: []
     }
+  ],
+
+  liveMatch: {
+    teamA: {
+      name: 'Thaai Tamizhans (Valayapatti)',
+      shortName: 'TTKC',
+      score: 0,
+      playersOnCourt: 7,
+      totalPlayers: 7,
+      raidPoints: 0,
+      tacklePoints: 0,
+      allOutPoints: 0,
+      bonusPoints: 0
+    },
+    teamB: {
+      name: 'Madurai Veeran (Melur)',
+      shortName: 'OPP',
+      score: 0,
+      playersOnCourt: 7,
+      totalPlayers: 7,
+      raidPoints: 0,
+      tacklePoints: 0,
+      allOutPoints: 0,
+      bonusPoints: 0
+    },
+    currentHalf: '1st Half',
+    matchDurationMinutes: 40,
+    matchTimeRemaining: 1200,
+    isMatchClockRunning: false,
+    raidTimeRemaining: 30,
+    isRaidRunning: false,
+    isDoOrDie: false,
+    activeRaidingTeam: 'teamA',
+    actionLog: [
+      { time: '00:00', text: '🏆 Live Match Scoreboard Ready: Thaai Tamizhans vs Madurai Veeran', type: 'system' }
+    ],
+    historyStack: []
+  },
+
+  scheduledMatches: [
+    {
+      id: 'match-1',
+      matchNumber: 1,
+      tournament: 'Sri Mariamman Kovil Panguni Thiruvizha Mabaerum Minnoli Kabaddi Potti',
+      village: 'Manapparai (Trichy)',
+      round: 'Round 1 (Mudhal Sutru)',
+      teamA: 'Thaai Tamizhans (Valayapatti)',
+      teamB: 'Madurai Veeran (Melur)',
+      date: '2026-09-14',
+      time: 'Iravu 08:30 PM',
+      venue: 'Amman Kovil Thidal (Semmann Kalam)',
+      groundType: 'Semmann Kalam (Red Soil)',
+      weightCategory: '65 Kg Weight (Standard)',
+      firstPrize: 'Rs.25,000 + Suzhar Koppai 🏆',
+      secondPrize: 'Rs.15,000 + Koppai',
+      entryFee: 'Rs.500',
+      refereeRule: 'Naduvar theerpe iruthiyanathu! Koopidum podhu udane kalam iranga vendum.',
+      posterImage: 'assets/match_notice_poster.jpg',
+      status: 'Live',
+      winner: null,
+      scoreA: 0,
+      scoreB: 0,
+      notes: 'Iravu minnoli velichathil nadakkum anal parakkum mudhal sutru aattam!'
+    },
+    {
+      id: 'match-2',
+      matchNumber: 2,
+      tournament: 'Muthalamman Chithirai Thiruvizha Akila Indhiya Minnoli Kabaddi Peruvizha',
+      village: 'Tenkasi',
+      round: 'Quarter-Final (Kaalirudhi)',
+      teamA: 'Thaai Tamizhans (Valayapatti)',
+      teamB: 'Nellai Siruthaigal (Tenkasi)',
+      date: '2026-09-16',
+      time: 'Iravu 09:00 PM',
+      venue: 'Oor Podhu Kabaddi Thidal (Mann Kalam)',
+      groundType: 'Manal & Mann Kalam (Sand)',
+      weightCategory: '48 Kg Weight (Sub-Junior)',
+      firstPrize: 'Rs.30,000 + Mabaerum Aadu & Koppai 🐐',
+      secondPrize: 'Rs.20,000 + Koppai',
+      entryFee: 'Rs.1,000',
+      refereeRule: 'Naduvarin mudive irudhi • Argument seiya anumadhi illai',
+      posterImage: 'assets/match_notice_poster.jpg',
+      status: 'Scheduled',
+      winner: null,
+      scoreA: 0,
+      scoreB: 0,
+      notes: 'Nellai maavattathin munnani raidergaludan modhum balapareetchai.'
+    },
+    {
+      id: 'match-3',
+      matchNumber: 3,
+      tournament: 'Gramiya Ilaignar Narpani Mandram Nadathum Mabaerum Kabaddi Thiruvizha',
+      village: 'Orathanadu (Thanjavur)',
+      round: 'Semi-Final (Araiyirudhi)',
+      teamA: 'Thaai Tamizhans (Valayapatti)',
+      teamB: 'Thanjavur Puligal (Orathanadu)',
+      date: '2026-09-18',
+      time: 'Iravu 08:00 PM',
+      venue: 'Arasu Palli Maidhanam (Semmann Kalam)',
+      groundType: 'Semmann Kalam (Red Soil)',
+      weightCategory: 'Open Match (Weight Limit Illai)',
+      firstPrize: 'Rs.20,000 + Gear Cycle & Koppai 🚲',
+      secondPrize: 'Rs.12,000 + Koppai',
+      entryFee: 'Rs.600',
+      refereeRule: 'Naduvar theerpe iruthiyanathu • 15-3-15 Mins Match',
+      posterImage: 'assets/match_notice_poster.jpg',
+      status: 'Scheduled',
+      winner: null,
+      scoreA: 0,
+      scoreB: 0,
+      notes: 'Semmann kalathil nadakkum paraparappana araiyirudhi yuththam.'
+    },
+    {
+      id: 'match-4',
+      matchNumber: 4,
+      tournament: 'Pongal Thirunaal Mabaerum Gramiya Kabaddi Championship 2026',
+      village: 'Pollachi (Coimbatore)',
+      round: 'Grand Final (Mabaerum Iruthi Potti)',
+      teamA: 'Thaai Tamizhans (Valayapatti)',
+      teamB: 'Kovai Kombans (Pollachi)',
+      date: '2026-09-05',
+      time: 'Iravu 10:00 PM',
+      venue: 'Oor Maidhanam (Minnoli Semmann Kalam)',
+      groundType: 'Semmann Kalam (Red Soil)',
+      weightCategory: '55 Kg Weight',
+      firstPrize: 'Rs.50,000 + Velli Naanayam & Suzhar Koppai 🏆',
+      secondPrize: 'Rs.30,000 + Koppai',
+      entryFee: 'Rs.1,000',
+      refereeRule: 'Anaithu Kazhaga Vidhimuraigalum Porundhum',
+      posterImage: 'assets/match_notice_poster.jpg',
+      status: 'Completed',
+      winner: 'teamA',
+      scoreA: 42,
+      scoreB: 35,
+      result: 'Thaai Tamizhans 7 Pulligal Vithiyasathil Champion! 🏆',
+      notes: 'Oore thirandu paartha mabaerum iruthi potti vetri!'
+    }
+  ],
+
+  savedMatches: [
+    {
+      id: 1,
+      date: '2026-09-05',
+      tournament: 'Pongal Thirunaal Mabaerum Gramiya Kabaddi Championship 2026',
+      venue: 'Oor Maidhanam (Minnoli Semmann Kalam), Pollachi',
+      teamA: 'Thaai Tamizhans (Valayapatti)',
+      teamB: 'Kovai Kombans (Pollachi)',
+      scoreA: 42,
+      scoreB: 35,
+      result: 'Thaai Tamizhans 7 Pulligal Munnilai Vetri! 🏆',
+      bestRaider: 'Arun (#07) - 14 Raid Pts',
+      bestDefender: 'Bala (#03) - 5 Tackle Pts'
+    }
   ]
 };
 
+const KABADDI_STORAGE_KEY = 'HOME_KABADDI_APP_DATA_TANGLISH_V2';
+
 function getAppData() {
-  const saved = localStorage.getItem('HOME_KABADDI_APP_DATA_TANGLISH_V1');
+  let saved = localStorage.getItem(KABADDI_STORAGE_KEY);
+  const v1Saved = localStorage.getItem('HOME_KABADDI_APP_DATA_TANGLISH_V1');
+
+  // Check if v1 has newer/more up-to-date data saved
+  if (!saved && v1Saved) {
+    saved = v1Saved;
+  } else if (saved && v1Saved) {
+    try {
+      const p1 = JSON.parse(v1Saved);
+      const p2 = JSON.parse(saved);
+      if (p1 && p1._updatedAt && p2 && p2._updatedAt && p1._updatedAt > p2._updatedAt) {
+        saved = v1Saved;
+      }
+    } catch(e) {}
+  }
+
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
-      if (!parsed.practiceCalendar || parsed.practiceCalendar.length === 0) {
+
+      // Ensure required collections exist if missing, without wiping user data!
+      if (!parsed.players || !Array.isArray(parsed.players) || parsed.players.length === 0) {
+        parsed.players = INITIAL_KABADDI_DATA.players;
+      }
+      if (!parsed.scheduledMatches || !Array.isArray(parsed.scheduledMatches) || parsed.scheduledMatches.length === 0) {
+        parsed.scheduledMatches = INITIAL_KABADDI_DATA.scheduledMatches;
+      }
+      if (!parsed.practiceCalendar || !Array.isArray(parsed.practiceCalendar) || parsed.practiceCalendar.length === 0) {
         parsed.practiceCalendar = INITIAL_KABADDI_DATA.practiceCalendar;
       }
-      if (!parsed.files || parsed.files.length === 0 || (parsed.files.length === 1 && parsed.files[0].id === 401 && !parsed.files[0].description)) {
+      if (!parsed.files || !Array.isArray(parsed.files)) {
         parsed.files = INITIAL_KABADDI_DATA.files;
       }
-      if (!parsed.notifications || parsed.notifications.length === 0 || !parsed.notifications[0].target) {
+      if (!parsed.notifications || !Array.isArray(parsed.notifications)) {
         parsed.notifications = INITIAL_KABADDI_DATA.notifications;
       }
-      if (parsed.players && !parsed.players.some(p => p.name.toLowerCase().includes('boopathi'))) {
-        parsed.players.push({
-          id: 6,
-          name: 'Boopathi K',
-          jersey: '#06',
-          position: 'All-Rounder',
-          status: 'Active-la Irukaru',
-          contact: '+91 99440 12345',
-          photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-          attendance: { present: 28, absent: 1, late: 0, percentage: 96 }
-        });
+      if (!parsed.instructions || !Array.isArray(parsed.instructions)) {
+        parsed.instructions = INITIAL_KABADDI_DATA.instructions;
       }
+      if (!parsed.liveMatch) {
+        parsed.liveMatch = JSON.parse(JSON.stringify(INITIAL_KABADDI_DATA.liveMatch));
+      }
+      if (!parsed.savedMatches || !Array.isArray(parsed.savedMatches)) {
+        parsed.savedMatches = INITIAL_KABADDI_DATA.savedMatches;
+      }
+      if (!parsed.attendance || typeof parsed.attendance !== 'object') {
+        parsed.attendance = INITIAL_KABADDI_DATA.attendance;
+      }
+      if (!parsed.performance || typeof parsed.performance !== 'object') {
+        parsed.performance = INITIAL_KABADDI_DATA.performance;
+      }
+
+      // Save back to sync both storage keys
+      const updatedJson = JSON.stringify(parsed);
+      localStorage.setItem(KABADDI_STORAGE_KEY, updatedJson);
+      localStorage.setItem('HOME_KABADDI_APP_DATA_TANGLISH_V1', updatedJson);
       return parsed;
     } catch (e) {
-      console.error(e);
+      console.error('Error parsing saved app data:', e);
     }
   }
+
   saveAppData(INITIAL_KABADDI_DATA);
   return INITIAL_KABADDI_DATA;
 }
 
 function saveAppData(data) {
   try {
-    // Sanitize files array so heavy data URLs / blob URLs do not crash LocalStorage 5MB quota
     const clone = JSON.parse(JSON.stringify(data));
+    clone._updatedAt = Date.now();
+    // Sanitize files array so heavy data URLs / blob URLs do not crash LocalStorage 5MB quota
     if (clone.files && Array.isArray(clone.files)) {
       clone.files = clone.files.map(f => {
         const item = Object.assign({}, f);
@@ -344,11 +522,14 @@ function saveAppData(data) {
         return item;
       });
     }
-    localStorage.setItem('HOME_KABADDI_APP_DATA_TANGLISH_V1', JSON.stringify(clone));
+    const jsonStr = JSON.stringify(clone);
+    localStorage.setItem(KABADDI_STORAGE_KEY, jsonStr);
+    localStorage.setItem('HOME_KABADDI_APP_DATA_TANGLISH_V1', jsonStr);
   } catch (e) {
     console.warn('LocalStorage quota limit reached, saving lean data:', e);
     try {
       const lean = JSON.parse(JSON.stringify(data));
+      lean._updatedAt = Date.now();
       if (lean.files) {
         lean.files = lean.files.map(f => ({
           id: f.id,
@@ -363,15 +544,12 @@ function saveAppData(data) {
           url: ''
         }));
       }
-      localStorage.setItem('HOME_KABADDI_APP_DATA_TANGLISH_V1', JSON.stringify(lean));
+      const leanStr = JSON.stringify(lean);
+      localStorage.setItem(KABADDI_STORAGE_KEY, leanStr);
+      localStorage.setItem('HOME_KABADDI_APP_DATA_TANGLISH_V1', leanStr);
     } catch (err) {
       console.error('Critical storage error:', err);
     }
-  }
-
-  // 🔥 INSTANT REAL-TIME CLOUD SYNC: Keeps Laptop & Mobile 100% In-Sync!
-  if (typeof window !== 'undefined' && window.FirebaseSync && typeof window.FirebaseSync.uploadData === 'function') {
-    window.FirebaseSync.uploadData(data);
   }
 }
 

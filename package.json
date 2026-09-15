@@ -1,18 +1,15 @@
 {
   "name": "thaai-tamizhans-kabaddi",
   "version": "1.0.0",
-  "description": "Official Squad, Coach & Match Management Portal for Thaai Tamizhans Kabaddi Club with Firebase Real-Time Backend",
+  "description": "Official Squad, Coach & Match Management Portal for Thaai Tamizhans Kabaddi Club",
   "main": "index.html",
   "scripts": {
-    "build": "echo 'Static deployment ready'",
     "start": "npx http-server . -p 8080 -c-1",
     "dev": "npx http-server . -p 8080 -c-1"
   },
   "keywords": [
     "kabaddi",
     "thaai-tamizhans",
-    "firebase",
-    "firestore",
     "pro-kabaddi",
     "sports-portal"
   ],

@@ -1,13 +1,26 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="3d-kabaddi-arena">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
+  <script>
+    (function() {
+      try {
+        var t = localStorage.getItem('thaai_tamizhans_theme') || '3d-kabaddi-arena';
+        document.documentElement.setAttribute('data-theme', t);
+      } catch(e) {}
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🏆 தாய் தமிழன்ஸ் (THAAI TAMIZHANS) — Official Portal</title>
   
   <!-- Favicon -->
   <link rel="icon" type="image/jpeg" href="assets/kabaddi_logo.jpg">
   
+  <!-- Google Fonts: Rajdhani (Sports Athletic), Mukta Malar (Tamil Typography), Outfit & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Mukta+Malar:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Rajdhani:wght@500;600;700;800&display=swap" rel="stylesheet">
+
   <!-- FontAwesome & Remix Icon CDN -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
@@ -15,7 +28,7 @@
   <!-- Custom Styles -->
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body data-theme="3d-kabaddi-arena">
+<body>
 
   <!-- Floating Ambient Glassmorphism Backlight Orbs (Creates genuine Glassmorphism Refraction) -->
   <div class="glass-orb glass-orb-1"></div>
@@ -31,7 +44,7 @@
   </div>
 
   <!-- FULL SCREEN 3D GLASSMORPHIC LOGIN SCREEN -->
-  <div id="loginScreen" class="login-screen-overlay">
+  <div id="loginScreen" class="login-screen-overlay hidden">
     <div class="login-card-3d">
       <!-- Club Brand Header -->
       <div class="login-logo-wrap">
@@ -123,12 +136,12 @@
         <!-- Quick 1-Click Demo Player Logins -->
         <div class="quick-login-pills-wrap">
           <div style="font-size:0.75rem; color:#94a3b8; font-weight:700; margin-bottom:8px; text-transform:uppercase;">⚡ Quick 1-Click Fast Login:</div>
-          <div class="quick-login-chip cyan" onclick="quickLogin('player', 6)">
+          <div class="quick-login-chip cyan" onclick="quickLogin('player', 1)">
             <span><i class="ri-user-star-fill" style="color:var(--accent-cyan);"></i> <b>Boopathi K</b> (Jersey #06 - All-Rounder)</span>
             <span style="color:var(--accent-cyan); font-size:0.75rem;">Login →</span>
           </div>
-          <div class="quick-login-chip cyan" onclick="quickLogin('player', 1)">
-            <span><i class="ri-run-fill" style="color:var(--accent-orange);"></i> <b>Arun</b> (Jersey #07 - Raider)</span>
+          <div class="quick-login-chip cyan" onclick="quickLogin('player', 2)">
+            <span><i class="ri-run-fill" style="color:var(--accent-orange);"></i> <b>Karthi S</b> (Jersey #07 - Lead Raider)</span>
             <span style="color:var(--accent-cyan); font-size:0.75rem;">Login →</span>
           </div>
         </div>
@@ -140,17 +153,6 @@
 
     <!-- TOP NAVBAR -->
     <header class="top-navbar">
-      <!-- Sidebar Toggle Button (Visible on screens <= 1024px) -->
-      <button type="button" class="sidebar-toggle-btn" id="sidebarToggleBtn" onclick="toggleSidebar()" title="Navigation Sidebar">
-        <i class="ri-menu-2-line"></i>
-      </button>
-
-      <!-- Brand icon/text on mobile navbar -->
-      <div class="mobile-nav-brand">
-        <img src="assets/kabaddi_logo.jpg" alt="Logo">
-        <span>தாய் தமிழன்ஸ்</span>
-      </div>
-
       <!-- Topbar Global Search Box -->
       <div class="topbar-search-wrap">
         <i class="ri-search-2-line search-icon"></i>
@@ -163,18 +165,6 @@
       </div>
 
       <div class="top-actions">
-        <!-- Instant View Switcher: Coach ⟷ Player (1-Click) -->
-        <button type="button" class="role-switch-pill" id="navRoleSwitchBtn" onclick="quickSwitchRole()" title="Quick Switch: Coach ⟷ Player View">
-          <i class="ri-run-line" style="color:var(--accent-orange);"></i>
-          <span id="navRoleSwitchText">Player View</span>
-        </button>
-
-        <!-- Live Cloud Sync Status Badge (Active on Laptop & Mobile) -->
-        <div id="firebaseLiveBadge" class="firebase-live-badge status-live" onclick="if(window.FirebaseSync && window.FirebaseSync.forceSyncNow) window.FirebaseSync.forceSyncNow()" title="🔥 Live Cloud Sync: Click to force sync immediately">
-          <span class="fb-dot pulse-green"></span>
-          <span class="fb-label">Live Cloud Sync</span>
-        </div>
-
         <!-- Theme Selector (10 Visual & 3D Animated Themes) -->
         <div class="theme-picker-wrap">
           <button class="theme-btn" id="themePickerBtn" onclick="toggleThemeMenu()" title="Theme Matru / Change Theme">
@@ -281,9 +271,6 @@
       </div>
     </header>
 
-    <!-- SIDEBAR BACKDROP (For Mobile / Tablet) -->
-    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
-
     <!-- COACH SIDEBAR -->
     <aside class="sidebar" id="coachSidebar">
       <div class="sidebar-header">
@@ -298,7 +285,8 @@
 
       <div class="nav-section-label">MAIN</div>
       <ul class="nav-menu">
-        <li class="nav-item"><button class="active" onclick="navigateTo('coach-dashboard')"><i class="ri-dashboard-3-line"></i> <span>🏠 Dashboard</span></button></li>
+        <li class="nav-item"><button onclick="navigateTo('coach-dashboard')"><i class="ri-dashboard-3-line"></i> <span>🏠 Dashboard</span></button></li>
+        <li class="nav-item"><button onclick="navigateTo('live-scoreboard')"><i class="ri-broadcast-fill" style="color:var(--accent-orange);"></i> <span>⚡ Live Scoreboard</span></button></li>
         <li class="nav-item"><button onclick="navigateTo('players')"><i class="ri-group-line"></i> <span>👥 Players</span></button></li>
         <li class="nav-item"><button onclick="navigateTo('practice')"><i class="ri-mental-health-line"></i> <span>📋 Practice</span></button></li>
         <li class="nav-item"><button onclick="navigateTo('match-notices')"><i class="ri-megaphone-line"></i> <span>📢 Match Notices</span></button></li>
@@ -335,7 +323,8 @@
 
       <div class="nav-section-label">MAIN</div>
       <ul class="nav-menu">
-        <li class="nav-item"><button class="active" onclick="navigateTo('player-dashboard')"><i class="ri-dashboard-3-line"></i> <span>🏠 Dashboard</span></button></li>
+        <li class="nav-item"><button onclick="navigateTo('player-dashboard')"><i class="ri-dashboard-3-line"></i> <span>🏠 Dashboard</span></button></li>
+        <li class="nav-item"><button onclick="navigateTo('live-scoreboard')"><i class="ri-broadcast-fill" style="color:var(--accent-orange);"></i> <span>⚡ Live Scoreboard</span></button></li>
         <li class="nav-item"><button onclick="navigateTo('my-instructions')"><i class="ri-file-list-3-line"></i> <span>📝 My Instructions</span></button></li>
         <li class="nav-item"><button onclick="navigateTo('my-practice')"><i class="ri-run-line"></i> <span>🏋️ My Practice</span></button></li>
         <li class="nav-item"><button onclick="navigateTo('match-notices')"><i class="ri-megaphone-line"></i> <span>📢 Match Notices</span></button></li>
@@ -422,15 +411,14 @@
         </div>
         
         <div class="form-group">
-          <label>Poster Image (Click Below to Upload or Press Ctrl+V)</label>
+          <label>Upload Poster</label>
           <input type="hidden" id="noticeImage" value="assets/match_notice_poster.jpg">
           
           <input type="file" id="noticeFilePicker" accept="image/*" style="display:none;" onchange="handleFileChoose(this, 'noticeImage', 'noticePreview')">
           
           <div class="image-upload-dropzone" onclick="document.getElementById('noticeFilePicker').click()">
             <i class="ri-image-add-line" style="font-size:1.5rem; color:var(--accent-cyan);"></i>
-            <div style="font-size:0.85rem; font-weight:700; color:#fff;">Click to Browse Image File OR Paste Copied Image (Ctrl+V)</div>
-            <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">Supports JPG, PNG, WebP tournament posters</div>
+            <div style="font-size:0.85rem; font-weight:700; color:#fff;">Upload Poster</div>
           </div>
           
           <div style="margin-top:12px; text-align:center;">
@@ -472,12 +460,12 @@
         <input type="hidden" id="playerEditId" value="">
         
         <div class="form-group">
-          <label>Player Photo (Click Below to Upload or Press Ctrl+V)</label>
+          <label>Upload Photo</label>
           <div style="display:flex; gap:14px; align-items:center; margin-bottom:12px;">
             <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80" id="playerPhotoPreview" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid var(--accent-orange); box-shadow:var(--glow-orange); flex-shrink:0;">
             <div style="display:flex; flex-direction:column; gap:6px;">
               <button type="button" class="btn btn-sm btn-outline" style="color:var(--accent-cyan); border-color:var(--accent-cyan);" onclick="openPhotoAdjusterFromPlayerModal()">
-                <i class="ri-crop-line"></i> ✂️ Adjust / Crop Photo (போட்டோ அட்ஜஸ்ட்)
+                <i class="ri-crop-line"></i> ✂️ Adjust / Crop Photo
               </button>
               <div style="font-size:0.76rem; color:#94a3b8;">Click to zoom, move face into circle, and center player</div>
             </div>
@@ -488,8 +476,7 @@
           
           <div class="image-upload-dropzone" onclick="document.getElementById('playerFilePicker').click()">
             <i class="ri-image-edit-line" style="font-size:1.4rem; color:var(--accent-cyan);"></i>
-            <div style="font-size:0.85rem; font-weight:700; color:#fff;">Click to Upload Image File OR Paste Copied Image (Ctrl+V)</div>
-            <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">Supports JPG, PNG, WebP real photos</div>
+            <div style="font-size:0.85rem; font-weight:700; color:#fff;">Upload Photo</div>
           </div>
         </div>
 
@@ -763,7 +750,7 @@
   <div class="modal-overlay" id="modalPhotoAdjuster" style="z-index: 10000;">
     <div class="modal-card photo-adjuster-card">
       <div class="modal-header">
-        <h3 class="text-gradient-cyan"><i class="ri-crop-2-line"></i> Photo Adjuster & Cropper (போட்டோ அட்ஜஸ்ட்)</h3>
+        <h3 class="text-gradient-cyan"><i class="ri-crop-2-line"></i> Photo Adjuster & Cropper</h3>
         <button class="modal-close" onclick="closePhotoAdjuster()">&times;</button>
       </div>
 
@@ -831,16 +818,181 @@
     </div>
   </div>
 
+  <!-- Modal: Schedule New Match (Local / Thiruvizha Match Scheduler) -->
+  <div class="modal-overlay" id="modalScheduleMatch">
+    <div class="modal-card" style="max-width: 620px;">
+      <div class="modal-header">
+        <h3 class="text-gradient-orange"><i class="ri-calendar-event-fill"></i> Local Match Schedule Panna (Match Scheduler)</h3>
+        <button class="modal-close" onclick="closeModal('modalScheduleMatch')">&times;</button>
+      </div>
+      <form id="formScheduleMatch" onsubmit="handleSaveScheduledMatch(event)">
+        <input type="hidden" id="matchSchedEditId" value="">
+        
+        <div class="form-group">
+          <label><i class="ri-trophy-line" style="color:var(--accent-gold);"></i> Oor Thiruvizha / Match Name (Tournament Name)</label>
+          <input type="text" class="form-control" id="matchSchedTournament" placeholder="e.g. Sri Mariamman Kovil Panguni Thiruvizha Minnoli Kabaddi Potti" value="Sri Mariamman Kovil Panguni Thiruvizha Minnoli Kabaddi Potti" required>
+        </div>
 
+        <!-- Match Notice Poster Image Selection / Upload -->
+        <div class="form-group">
+          <label><i class="ri-image-add-line" style="color:var(--accent-cyan);"></i> Upload Poster</label>
+          <input type="hidden" id="matchSchedPoster" value="assets/match_notice_poster.jpg">
+          <input type="file" id="matchSchedFilePicker" accept="image/*" style="display:none;" onchange="handleFileChoose(this, 'matchSchedPoster', 'matchSchedPreview')">
+          <div class="image-upload-dropzone" onclick="document.getElementById('matchSchedFilePicker').click()" style="padding:12px; margin-bottom:8px;">
+            <i class="ri-image-add-line" style="font-size:1.3rem; color:var(--accent-cyan);"></i>
+            <div style="font-size:0.80rem; font-weight:700; color:#fff;">Upload Poster</div>
+          </div>
+          <div style="text-align:center;">
+            <img src="assets/match_notice_poster.jpg" id="matchSchedPreview" style="max-width:100%; height:110px; object-fit:cover; border-radius:10px; border:1px solid var(--glass-border); box-shadow:0 0 15px rgba(0,242,254,0.25);">
+          </div>
+        </div>
 
-  <!-- Firebase Core SDKs (Compat version for guaranteed mobile & desktop browser support) -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics-compat.js"></script>
-  <script src="js/firebase-config.js"></script>
-  <script src="js/firebase-service.js"></script>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+          <div class="form-group">
+            <label><i class="ri-shield-star-line" style="color:var(--accent-orange);"></i> Namma Team (Team A + Oor)</label>
+            <input type="text" class="form-control" id="matchSchedTeamA" value="Thaai Tamizhans (Valayapatti)" required>
+          </div>
+          <div class="form-group">
+            <label><i class="ri-shield-user-line" style="color:var(--accent-cyan);"></i> Ethirani Team (Team B + Oor)</label>
+            <input type="text" class="form-control" id="matchSchedTeamB" placeholder="e.g. Madurai Veeran Kabaddi Kazhagam (Melur)" value="Madurai Veeran (Melur)" required>
+          </div>
+        </div>
+
+        <!-- Local Tournament Special Attributes: Prizes, Weight, Ground -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+          <div class="form-group">
+            <label><i class="ri-medal-fill" style="color:#fbbf24;"></i> 1st Prize & Cup (Parisut Thogai)</label>
+            <input type="text" class="form-control" id="matchSchedFirstPrize" placeholder="e.g. Rs.25,000 + Suzhar Koppai" value="Rs.25,000 + Suzhar Koppai 🏆" required>
+          </div>
+          <div class="form-group">
+            <label><i class="ri-scales-3-line" style="color:#38bdf8;"></i> Weight Category (48kg to Open Match)</label>
+            <select class="form-control" id="matchSchedWeight">
+              <option value="48 Kg Weight (Sub-Junior)">48 Kg Weight (Sub-Junior)</option>
+              <option value="50 Kg Weight">50 Kg Weight</option>
+              <option value="52 Kg Weight">52 Kg Weight</option>
+              <option value="55 Kg Weight">55 Kg Weight</option>
+              <option value="60 Kg Weight">60 Kg Weight</option>
+              <option value="65 Kg Weight" selected>65 Kg Weight (Standard)</option>
+              <option value="70 Kg Weight">70 Kg Weight</option>
+              <option value="75 Kg Weight">75 Kg Weight</option>
+              <option value="80 Kg Weight">80 Kg Weight</option>
+              <option value="85 Kg Weight">85 Kg Weight</option>
+              <option value="Open Match (Weight Limit Illai)">Open Match (Weight Limit Illai)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+          <div class="form-group">
+            <label><i class="ri-landscape-line" style="color:#f59e0b;"></i> Aadukalam Type (Ground Surface)</label>
+            <select class="form-control" id="matchSchedGroundType">
+              <option value="Semmann Kalam (Red Soil)">Semmann Kalam (Red Soil)</option>
+              <option value="Manal & Mann Kalam">Manal & Mann Kalam (Sand)</option>
+              <option value="Mat Court (Pro Mat)">Mat Court (Pro Mat)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label><i class="ri-coupon-3-line" style="color:#a855f7;"></i> Entry Fee (Nuzhaivuk Kattanam)</label>
+            <input type="text" class="form-control" id="matchSchedEntryFee" placeholder="e.g. Rs.500" value="Rs.500">
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+          <div class="form-group">
+            <label><i class="ri-calendar-line"></i> Date (Thethi)</label>
+            <input type="date" class="form-control" id="matchSchedDate" required>
+          </div>
+          <div class="form-group">
+            <label><i class="ri-time-line"></i> Time (Neram)</label>
+            <input type="text" class="form-control" id="matchSchedTime" placeholder="e.g. Iravu 08:30 PM" value="Iravu 08:30 PM" required>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+          <div class="form-group">
+            <label><i class="ri-map-pin-line"></i> Ground / Oor Idam (Venue)</label>
+            <input type="text" class="form-control" id="matchSchedVenue" placeholder="e.g. Amman Kovil Thidal (Semmann Kalam)" value="Amman Kovil Thidal (Semmann Kalam)" required>
+          </div>
+          <div class="form-group">
+            <label><i class="ri-award-line"></i> Sutru (Stage / Round)</label>
+            <select class="form-control" id="matchSchedRound">
+              <option value="Round 1 (Mudhal Sutru)">Round 1 (Mudhal Sutru)</option>
+              <option value="Round 2 (Rendaam Sutru)">Round 2 (Rendaam Sutru)</option>
+              <option value="Quarter-Final (Kaalirudhi)">Quarter-Final (Kaalirudhi)</option>
+              <option value="Semi-Final (Araiyirudhi)">Semi-Final (Araiyirudhi)</option>
+              <option value="Grand Final (Mabaerum Iruthi Potti)">Grand Final (Mabaerum Iruthi Potti)</option>
+              <option value="Special Match (Kaatchi Potti)">Special Match (Kaatchi Potti)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label><i class="ri-government-line" style="color:#ef4444;"></i> Naduvar Rule Note (Referee Decision)</label>
+          <input type="text" class="form-control" id="matchSchedRefereeRule" placeholder="Naduvar theerpe iruthiyanathu! Koopidum podhu udane kalam iranga vendum." value="Naduvar theerpe iruthiyanathu! Koopidum podhu udane kalam iranga vendum.">
+        </div>
+
+        <div class="form-group">
+          <label><i class="ri-sticky-note-line"></i> Match Notes / Strategy</label>
+          <input type="text" class="form-control" id="matchSchedNotes" placeholder="e.g. Night floodlight semmann kalam match, full squad ready!">
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:20px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('modalScheduleMatch')">Cancel (Rathu)</button>
+          <button type="submit" class="btn btn-orange"><i class="ri-check-line"></i> Schedulela Save Pannu (Save Match)</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Winner Declaration Celebration (Vetri Arivippu & Kondattam) -->
+  <div class="modal-overlay" id="modalDeclareWinner" style="z-index: 10001;">
+    <div class="modal-card winner-modal-card">
+      <canvas id="winnerConfettiCanvas" class="winner-confetti-canvas"></canvas>
+      
+      <div class="winner-modal-content">
+        <!-- Floating Trophy & Sparkle Aura -->
+        <div class="winner-trophy-wrap">
+          <div class="winner-aura-ring"></div>
+          <div class="winner-trophy-icon">🏆</div>
+        </div>
+
+        <div class="winner-subtitle-badge">👑 OFFICIAL MATCH RESULT • MATCH MUDIVU</div>
+        <h2 class="winner-team-title" id="winnerDeclaredTeamName">Thaai Tamizhans</h2>
+        <div class="winner-status-text">DECLARED AS OFFICIAL WINNER! (VETRI PETRATHU!)</div>
+
+        <!-- Scores Breakdown Display -->
+        <div class="winner-score-pill-row">
+          <div class="winner-score-box" id="winnerBoxTeamA">
+            <div class="winner-team-lbl" id="winnerCardNameA">Thaai Tamizhans</div>
+            <div class="winner-team-pts" id="winnerCardScoreA">0</div>
+          </div>
+          <div class="winner-vs-badge">VS</div>
+          <div class="winner-score-box" id="winnerBoxTeamB">
+            <div class="winner-team-lbl" id="winnerCardNameB">Madurai Veeran</div>
+            <div class="winner-team-pts" id="winnerCardScoreB">0</div>
+          </div>
+        </div>
+
+        <div class="winner-margin-tag" id="winnerMarginTag">
+          🎉 Victory by 6 Points!
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="winner-actions-row">
+          <button type="button" class="btn btn-primary" onclick="closeWinnerModalAndReturnSchedule()">
+            <i class="ri-calendar-check-line"></i> 📅 Match Schedule (Attavanai)
+          </button>
+          <button type="button" class="btn btn-outline" onclick="closeModal('modalDeclareWinner')">
+            <i class="ri-dashboard-line"></i> Scoreboard Paaru (View Scoreboard)
+          </button>
+          <button type="button" class="btn btn-green" onclick="shareMatchToWhatsApp()">
+            <i class="ri-whatsapp-fill"></i> WhatsAppla Share Pannu
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="js/data.js"></script>
   <script src="js/app.js"></script>
 </body>

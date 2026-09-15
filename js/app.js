@@ -9,7 +9,7 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 let appData = getAppData();
-let currentView = 'coach-dashboard';
+let currentView = localStorage.getItem('thaai_tamizhans_current_view') || 'coach-dashboard';
 
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
@@ -30,7 +30,7 @@ function initAuth() {
   let savedSession = localStorage.getItem('thaai_tamizhans_auth_session');
   const isExplicitLogout = localStorage.getItem('thaai_tamizhans_logged_out') === 'true';
 
-  // Seamless Auto-Start: If opening fresh (e.g. Vercel Link), immediately open Coach Dashboard like localhost:8080!
+  // Seamless auto-restore default coach session if not explicitly logged out
   if (!savedSession && !isExplicitLogout) {
     const defaultSession = {
       role: 'coach',
@@ -50,21 +50,11 @@ function initAuth() {
         appData.activeRole = session.role;
         const savedView = localStorage.getItem('thaai_tamizhans_current_view');
 
-        if (session.role === 'player') {
-          if (session.playerId) {
-            appData.activePlayerId = session.playerId;
-          }
-          if (savedView && !['coach-dashboard', 'attendance', 'performance', 'practice', 'players'].includes(savedView)) {
-            currentView = savedView;
-          } else {
-            currentView = 'player-dashboard';
-          }
-        } else {
-          if (savedView && !['player-dashboard', 'my-attendance', 'my-performance', 'my-practice', 'my-instructions'].includes(savedView)) {
-            currentView = savedView;
-          } else {
-            currentView = 'coach-dashboard';
-          }
+        if (session.role === 'player' && session.playerId) {
+          appData.activePlayerId = session.playerId;
+        }
+        if (savedView) {
+          currentView = savedView;
         }
 
         if (loginScreen) {
@@ -77,7 +67,7 @@ function initAuth() {
     }
   }
 
-  // If no saved session, display the Login Screen
+  // If explicit logout or invalid session, display Login Screen
   if (loginScreen) {
     loginScreen.classList.remove('hidden');
   }
@@ -186,7 +176,6 @@ function handleAuthLogin(e, role) {
 
 function quickLogin(role, targetPlayerId) {
   const loginScreen = document.getElementById('loginScreen');
-  localStorage.removeItem('thaai_tamizhans_logged_out');
 
   if (role === 'coach') {
     const sessionData = {
@@ -195,6 +184,7 @@ function quickLogin(role, targetPlayerId) {
       loginTime: Date.now()
     };
     localStorage.setItem('thaai_tamizhans_auth_session', JSON.stringify(sessionData));
+    localStorage.removeItem('thaai_tamizhans_logged_out');
 
     if (loginScreen) loginScreen.classList.add('hidden');
     switchRole('coach');
@@ -213,6 +203,7 @@ function quickLogin(role, targetPlayerId) {
       loginTime: Date.now()
     };
     localStorage.setItem('thaai_tamizhans_auth_session', JSON.stringify(sessionData));
+    localStorage.removeItem('thaai_tamizhans_logged_out');
 
     appData.activePlayerId = player.id;
     if (loginScreen) loginScreen.classList.add('hidden');
@@ -291,7 +282,7 @@ function setAppTheme(themeName, showToastMsg = true) {
   const menu = document.getElementById('themeMenu');
   if (menu) menu.classList.remove('active');
   
-  if (typeof appData !== 'undefined' && appData.currentView === 'settings') {
+  if (currentView === 'settings') {
     renderCurrentView();
   }
 
@@ -1484,6 +1475,22 @@ function switchRole(role) {
   }
 }
 
+function syncSidebarActiveState() {
+  const isCoach = appData.activeRole === 'coach';
+  const activeSidebarId = isCoach ? 'coachSidebar' : 'playerSidebar';
+  const sidebar = document.getElementById(activeSidebarId);
+  if (!sidebar) return;
+
+  const buttons = sidebar.querySelectorAll('.nav-item button');
+  buttons.forEach(btn => {
+    btn.classList.remove('active');
+    const onclickStr = btn.getAttribute('onclick') || '';
+    if (onclickStr.includes(`'${currentView}'`) || onclickStr.includes(`"${currentView}"`)) {
+      btn.classList.add('active');
+    }
+  });
+}
+
 function renderAppShell() {
   const isCoach = appData.activeRole === 'coach';
   
@@ -1504,113 +1511,19 @@ function renderAppShell() {
     const topName = document.getElementById('topUserName');
     const topRole = document.getElementById('topUserRole');
     const topAvatar = document.getElementById('topUserAvatar');
-    if (activePlayer) {
-      if (topName) topName.innerText = `${activePlayer.name} (${activePlayer.jersey})`;
-      if (topRole) topRole.innerText = `${activePlayer.position}`;
-      if (topAvatar) topAvatar.src = activePlayer.photo || 'assets/thaai_tamizhans_logo.jpg';
-    }
+    if (topName) topName.innerText = `${activePlayer.name} (${activePlayer.jersey})`;
+    if (topRole) topRole.innerText = `${activePlayer.position}`;
+    if (topAvatar) topAvatar.src = activePlayer.photo;
   }
 
-  updateRoleSwitchButton();
-}
-
-function quickSwitchRole() {
-  const isCoach = appData.activeRole === 'coach';
-  if (isCoach) {
-    const player = (appData.players && appData.players.find(p => p.name.toLowerCase().includes('boopathi'))) || (appData.players && appData.players[0]) || { id: 1, name: 'Arun', jersey: '#07' };
-    appData.activeRole = 'player';
-    appData.activePlayerId = player.id;
-    localStorage.setItem('thaai_tamizhans_auth_session', JSON.stringify({
-      role: 'player',
-      playerId: player.id,
-      name: player.name,
-      jersey: player.jersey,
-      loginTime: Date.now()
-    }));
-    switchRole('player');
-    showToast(`⚡ Switched to Player Portal: ${player.name} (${player.jersey})`, 'ri-run-line');
-  } else {
-    appData.activeRole = 'coach';
-    const coachName = (appData.coachProfile && appData.coachProfile.name) ? appData.coachProfile.name : 'Coach Arun';
-    localStorage.setItem('thaai_tamizhans_auth_session', JSON.stringify({
-      role: 'coach',
-      name: coachName,
-      loginTime: Date.now()
-    }));
-    switchRole('coach');
-    showToast(`⚡ Switched to Coach Portal: ${coachName}`, 'ri-shield-star-line');
-  }
-  updateRoleSwitchButton();
-}
-
-function updateRoleSwitchButton() {
-  const btn = document.getElementById('navRoleSwitchBtn');
-  const btnText = document.getElementById('navRoleSwitchText');
-  const btnIcon = document.querySelector('#navRoleSwitchBtn i');
-  if (!btn) return;
-  
-  if (appData.activeRole === 'coach') {
-    btn.classList.remove('player-mode');
-    if (btnText) btnText.textContent = 'Player View';
-    if (btnIcon) {
-      btnIcon.className = 'ri-run-line';
-      btnIcon.style.color = 'var(--accent-orange)';
-    }
-  } else {
-    btn.classList.add('player-mode');
-    if (btnText) btnText.textContent = 'Coach View';
-    if (btnIcon) {
-      btnIcon.className = 'ri-shield-star-line';
-      btnIcon.style.color = 'var(--accent-cyan)';
-    }
-  }
-}
-
-function toggleSidebar() {
-  const isCoach = appData.activeRole === 'coach';
-  const activeSidebar = document.getElementById(isCoach ? 'coachSidebar' : 'playerSidebar');
-  const backdrop = document.getElementById('sidebarBackdrop');
-  
-  if (activeSidebar) {
-    const isOpen = activeSidebar.classList.contains('mobile-open');
-    if (isOpen) {
-      closeSidebar();
-    } else {
-      activeSidebar.classList.add('mobile-open');
-      if (backdrop) backdrop.classList.add('active');
-      document.body.style.overflow = 'hidden';
-    }
-  }
-}
-
-function closeSidebar() {
-  const coachSidebar = document.getElementById('coachSidebar');
-  const playerSidebar = document.getElementById('playerSidebar');
-  const backdrop = document.getElementById('sidebarBackdrop');
-
-  if (coachSidebar) coachSidebar.classList.remove('mobile-open');
-  if (playerSidebar) playerSidebar.classList.remove('mobile-open');
-  if (backdrop) backdrop.classList.remove('active');
-  document.body.style.overflow = '';
+  syncSidebarActiveState();
 }
 
 function navigateTo(viewKey) {
   currentView = viewKey;
   localStorage.setItem('thaai_tamizhans_current_view', viewKey);
   
-  const isCoach = appData.activeRole === 'coach';
-  const activeSidebar = isCoach ? 'coachSidebar' : 'playerSidebar';
-  const buttons = document.querySelectorAll(`#${activeSidebar} .nav-item button`);
-  buttons.forEach(btn => {
-    btn.classList.remove('active');
-    if (btn.getAttribute('onclick')?.includes(viewKey)) {
-      btn.classList.add('active');
-    }
-  });
-
-  // Close sidebar smoothly if open on mobile/tablet
-  closeSidebar();
-
+  syncSidebarActiveState();
   renderCurrentView();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -1627,16 +1540,23 @@ function renderCurrentView() {
     else if (currentView === 'attendance') currentView = 'my-attendance';
     else if (currentView === 'performance') currentView = 'my-performance';
     else if (currentView === 'practice') currentView = 'my-practice';
+    else if (currentView === 'players') currentView = 'team-members';
   } else {
     if (currentView === 'player-dashboard') currentView = 'coach-dashboard';
     else if (currentView === 'my-attendance') currentView = 'attendance';
     else if (currentView === 'my-performance') currentView = 'performance';
     else if (currentView === 'my-practice') currentView = 'practice';
+    else if (currentView === 'my-instructions') currentView = 'coach-dashboard';
   }
+  
+  // Persist validated current view so refreshing page ALWAYS stays on the same page
+  localStorage.setItem('thaai_tamizhans_current_view', currentView);
+  syncSidebarActiveState();
   
   switch(currentView) {
     case 'coach-dashboard': container.innerHTML = renderCoachDashboardHTML(); break;
     case 'player-dashboard': container.innerHTML = renderPlayerDashboardHTML(); break;
+    case 'live-scoreboard': container.innerHTML = renderLiveScoreboardHTML(); break;
     case 'players': container.innerHTML = renderPlayersHTML(); break;
     case 'practice': container.innerHTML = renderPracticeHTML(); break;
     case 'my-practice': container.innerHTML = renderMyPracticeHTML(); break;
@@ -2180,7 +2100,6 @@ function renderCoachDashboardHTML() {
           <span class="kabaddi-chip bonus"><i class="ri-trophy-fill"></i> PRO MAT ARENA</span>
         </div>
         <h2 style="font-size: 1.8rem; font-weight:800;" class="text-gradient-orange">Good Morning, ${appData.coachProfile.name} 👋</h2>
-        <p style="color:#94a3b8; font-size:0.9rem;">தாய் தமிழன்ஸ் (THAAI TAMIZHANS) • Coach control panel with real-time controls.</p>
       </div>
       <button class="btn btn-court" onclick="openModalInstruction()">
         <i class="ri-file-add-line"></i> Give Player Instruction
@@ -2258,27 +2177,37 @@ function renderCoachDashboardHTML() {
     </div>
 
     <!-- Quick Actions -->
-    <h3 style="font-size:1.1rem; margin-bottom:16px;" class="text-gradient-cyan"><i class="ri-flashlight-fill"></i>⚡ Quick Actions</h3>
+    <h3 style="font-size:1.1rem; margin-bottom:16px;" class="text-gradient-cyan"><i class="ri-flashlight-fill"></i>⚡ Quick Actions (விரைவுச் செயல்கள்)</h3>
     <div class="quick-actions-grid">
+      <div class="quick-action-card" onclick="navigateTo('live-scoreboard')" style="border-top-color:var(--accent-orange); background:rgba(255, 85, 0, 0.08);">
+        <div class="icon-3d orange"><i class="ri-broadcast-fill"></i></div>
+        <div class="quick-action-title">Live Scoreboard</div>
+        <div style="font-size:0.72rem; color:var(--accent-orange); font-weight:700;">நேரலை ஸ்கோர்போர்டு & 30s டைமர்</div>
+      </div>
       <div class="quick-action-card" onclick="openModalAddPlayer()">
         <div class="icon-3d cyan"><i class="ri-user-add-line"></i></div>
         <div class="quick-action-title">Add Player</div>
+        <div style="font-size:0.72rem; color:#94a3b8;">வீரர் சேர்த்தல்</div>
       </div>
       <div class="quick-action-card" onclick="openModalPractice()">
         <div class="icon-3d orange"><i class="ri-calendar-check-line"></i></div>
-        <div class="quick-action-title">Create/Edit Practice</div>
+        <div class="quick-action-title">Practice Schedule</div>
+        <div style="font-size:0.72rem; color:#94a3b8;">பயிற்சி அட்டவணை</div>
       </div>
       <div class="quick-action-card" onclick="openModalNotice()">
         <div class="icon-3d green"><i class="ri-megaphone-line"></i></div>
-        <div class="quick-action-title">Create Match Notice</div>
+        <div class="quick-action-title">Match Notice</div>
+        <div style="font-size:0.72rem; color:#94a3b8;">போட்டி அறிவிப்பு</div>
       </div>
       <div class="quick-action-card" onclick="openModalInstruction()">
         <div class="icon-3d purple"><i class="ri-edit-box-line"></i></div>
         <div class="quick-action-title">Give Instruction</div>
+        <div style="font-size:0.72rem; color:#94a3b8;">வீரர் குறிப்புகள்</div>
       </div>
       <div class="quick-action-card" onclick="navigateTo('attendance')">
         <div class="icon-3d cyan"><i class="ri-checkbox-circle-line"></i></div>
         <div class="quick-action-title">Mark Attendance</div>
+        <div style="font-size:0.72rem; color:#94a3b8;">வருகை பதிவு</div>
       </div>
     </div>
   `;
@@ -2364,7 +2293,6 @@ function renderPlayersHTML() {
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
       <div>
         <h2 style="font-size: 1.6rem; font-weight:800;" class="text-gradient-cyan">👥 Team Players</h2>
-        <p style="color:#94a3b8; font-size:0.88rem;">Squad roster (${appData.players.length} Players).</p>
       </div>
       ${isCoach ? `
         <button class="btn btn-primary" onclick="openModalAddPlayer()">
@@ -2374,26 +2302,86 @@ function renderPlayersHTML() {
     </div>
 
     <div class="cards-grid">
-      ${appData.players.map(p => `
-        <div class="player-card" onclick="viewPlayerProfile(${p.id})">
-          <div class="player-photo-wrap" onclick="event.stopPropagation(); openPhotoAdjusterForPlayer(${p.id});" title="போட்டோவை அட்ஜஸ்ட் செய் (Click to Adjust Photo)">
-            <img src="${p.photo}" alt="${p.name}" class="player-photo">
-            <div class="player-photo-overlay-btn"><i class="ri-crop-line"></i><span>Adjust</span></div>
-            <span class="jersey-tag">${p.jersey}</span>
-          </div>
-          <div class="player-name">${p.name}</div>
-          <div class="player-pos">${p.position}</div>
-          <span class="status-pill active">● Active</span>
+      ${appData.players.map(p => {
+        const perf = getOrInitPlayerPerformance(p.id);
+        const pos = (p.position || '').toLowerCase();
+        let roleClass = 'role-raider';
+        let roleIcon = 'ri-flashlight-fill';
+        if (pos.includes('defend') || pos.includes('corner') || pos.includes('cover')) {
+          roleClass = 'role-defender';
+          roleIcon = 'ri-shield-fill';
+        } else if (pos.includes('all')) {
+          roleClass = 'role-allrounder';
+          roleIcon = 'ri-vip-crown-fill';
+        }
 
-          ${isCoach ? `
-            <div class="card-actions-bar">
-              <button class="btn btn-sm btn-outline" style="color:var(--accent-cyan);" onclick="event.stopPropagation(); editPlayer(${p.id});"><i class="ri-edit-line"></i> Edit</button>
-              <button class="btn btn-sm btn-outline" style="color:var(--accent-orange); border-color:rgba(245,158,11,0.5);" onclick="event.stopPropagation(); openPhotoAdjusterForPlayer(${p.id});" title="Adjust / Crop Photo Framing"><i class="ri-crop-line"></i> Photo</button>
-              <button class="btn btn-sm btn-red" onclick="event.stopPropagation(); deletePlayer(${p.id});"><i class="ri-delete-bin-line"></i> Delete</button>
+        const jerseyDisplay = (p.jersey && p.jersey.toString().startsWith('#')) ? p.jersey : ('#' + (p.jersey || '00'));
+
+        return `
+          <div class="player-card dynamic-card ${roleClass}" onclick="viewPlayerProfile(${p.id})">
+            <!-- Dynamic Top Badge Strip -->
+            <div class="player-card-top-strip">
+              <span class="player-role-badge ${roleClass}">
+                <i class="${roleIcon}"></i> ${p.position}
+              </span>
+              <span class="player-jersey-shield">${jerseyDisplay}</span>
             </div>
-          ` : ''}
-        </div>
-      `).join('')}
+
+            <!-- Avatar with Dynamic Glow Ring -->
+            <div class="player-photo-wrap" onclick="event.stopPropagation(); openPhotoAdjusterForPlayer(${p.id});" title="Click to Adjust Photo">
+              <div class="avatar-glow-ring"></div>
+              <img src="${p.photo}" alt="${p.name}" class="player-photo">
+              <div class="player-photo-overlay-btn">
+                <i class="ri-crop-line"></i>
+                <span>Adjust</span>
+              </div>
+            </div>
+
+            <!-- Player Name & Details -->
+            <div class="player-card-info">
+              <div class="player-name">${p.name}</div>
+              <div class="player-pos-tag">${p.position}</div>
+            </div>
+
+            <!-- Dynamic Quick Mini-Stats Bar -->
+            <div class="player-mini-stats">
+              <div class="mini-stat-item">
+                <span class="stat-label">Rating</span>
+                <span class="stat-val rating-val"><i class="ri-star-fill"></i> ${perf?.starRating || 4}.0</span>
+              </div>
+              <div class="mini-stat-divider"></div>
+              <div class="mini-stat-item">
+                <span class="stat-label">Attendance</span>
+                <span class="stat-val attendance-val">${p.attendance?.percentage || 90}%</span>
+              </div>
+              <div class="mini-stat-divider"></div>
+              <div class="mini-stat-item">
+                <span class="stat-label">Squad</span>
+                <span class="stat-val squad-val"><span class="pulse-dot"></span> Active</span>
+              </div>
+            </div>
+
+            <!-- Action Controls (Coach Mode) vs Player View -->
+            ${isCoach ? `
+              <div class="card-actions-bar">
+                <button class="btn btn-sm card-action-btn edit-btn" onclick="event.stopPropagation(); editPlayer(${p.id});">
+                  <i class="ri-edit-line"></i> Edit
+                </button>
+                <button class="btn btn-sm card-action-btn photo-btn" onclick="event.stopPropagation(); openPhotoAdjusterForPlayer(${p.id});" title="Adjust Photo">
+                  <i class="ri-crop-line"></i> Photo
+                </button>
+                <button class="btn btn-sm card-action-btn delete-btn" onclick="event.stopPropagation(); deletePlayer(${p.id});">
+                  <i class="ri-delete-bin-line"></i> Delete
+                </button>
+              </div>
+            ` : `
+              <div class="card-footer-view-btn">
+                <span>View Full Profile <i class="ri-arrow-right-line"></i></span>
+              </div>
+            `}
+          </div>
+        `;
+      }).join('')}
     </div>
   `;
 }
@@ -2720,7 +2708,6 @@ function renderPracticeHTML() {
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
       <div>
         <h2 style="font-size: 1.6rem; font-weight:800;" class="text-gradient-orange">🏋️ Interactive Training & Practice Calendar</h2>
-        <p style="color:#94a3b8; font-size:0.88rem;">Coach practice calendar — Date select panni practice schedule pannalam, players-ku instant-ah synchronize aagum.</p>
       </div>
       <button class="btn btn-orange" onclick="openSchedulePracticeModal('${selectedCalDate}')">
         <i class="ri-calendar-event-line"></i> Schedule Practice Session
@@ -2800,8 +2787,7 @@ function renderMyPracticeHTML() {
 
   return `
     <div style="margin-bottom: 24px;">
-      <h2 style="font-size: 1.6rem; font-weight:800;" class="text-gradient-cyan">🏋️ My Practice Calendar (Player View)</h2>
-      <p style="color:#94a3b8; font-size:0.88rem;">Coach schedule panna practice sessions calendar-la date-wise clear-ah check pannikalam.</p>
+      <h2 style="font-size: 1.6rem; font-weight:800;" class="text-gradient-cyan">🏋️ My Practice Calendar</h2>
     </div>
 
     ${todaySession ? `
@@ -3083,20 +3069,8 @@ function renderMatchNoticesHTML() {
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
           <span class="kabaddi-chip lion"><i class="ri-megaphone-fill"></i> TOURNAMENT BULLETIN</span>
           <span class="kabaddi-chip bonus">${(appData.matchNotices || []).length} NOTICES</span>
-          ${isCoach ? `
-            <span class="badge" style="background:rgba(255,94,0,0.15); color:var(--accent-orange); border:1px solid rgba(255,94,0,0.3); padding:3px 10px; border-radius:12px; font-size:0.75rem;">
-              <i class="ri-edit-2-fill"></i> Coach Upload & Edit Mode
-            </span>
-          ` : `
-            <span class="badge" style="background:rgba(16,185,129,0.15); color:var(--accent-green); border:1px solid rgba(16,185,129,0.3); padding:3px 10px; border-radius:12px; font-size:0.75rem;">
-              <i class="ri-eye-line"></i> Player Read-Only View
-            </span>
-          `}
         </div>
         <h2 style="font-size: 1.6rem; font-weight:800;" class="text-gradient-cyan">📢 Match Notices (போட்டி அறிவிப்புகள்)</h2>
-        <p style="color:#94a3b8; font-size:0.88rem;">
-          ${isCoach ? 'Upload match posters, update tournament dates, and publish team reporting times.' : 'Official match day schedules, stadium location, and Coach instructions.'}
-        </p>
       </div>
       ${isCoach ? `
         <button class="btn btn-primary" onclick="openModalNotice()">
@@ -3660,14 +3634,10 @@ function renderPerformanceHTML() {
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
           <span class="kabaddi-chip lion"><i class="ri-star-fill"></i> ${isCoach ? 'COACH EVALUATION PANEL' : 'MY PERFORMANCE & STATS'}</span>
           <span class="kabaddi-chip bonus">${isCoach ? `${appData.players.length} SQUAD PLAYERS` : `JERSEY ${activePlayer.jersey}`}</span>
-          ${!isCoach ? `<span class="badge" style="background:rgba(16,185,129,0.15); color:var(--accent-green); border:1px solid rgba(16,185,129,0.3); padding:3px 10px; border-radius:12px; font-size:0.75rem;"><i class="ri-eye-line"></i> Player Read-Only View</span>` : `<span class="badge" style="background:rgba(255,94,0,0.15); color:var(--accent-orange); border:1px solid rgba(255,94,0,0.3); padding:3px 10px; border-radius:12px; font-size:0.75rem;"><i class="ri-edit-2-fill"></i> Coach Edit Mode</span>`}
         </div>
         <h2 style="font-size: 1.6rem; font-weight:800;" class="text-gradient-orange">
           📊 ${isCoach ? 'Player Performance Tracking' : `${activePlayer.name}'s Performance Card`}
         </h2>
-        <p style="color:#94a3b8; font-size:0.88rem;">
-          ${isCoach ? 'Evaluate skills, set coach star ratings, adjust metric sliders, and save feedback notes.' : 'View your official skill ratings, progress meters, and Coach feedback.'}
-        </p>
       </div>
       <div>
         <span class="badge" style="background:rgba(0,242,254,0.1); color:var(--accent-cyan); border:1px solid rgba(0,242,254,0.3); padding:8px 14px; border-radius:20px; font-size:0.85rem;">
@@ -4138,16 +4108,10 @@ function renderAttendanceHTML() {
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
           <span class="kabaddi-chip lion"><i class="ri-calendar-check-fill"></i> DAILY ATTENDANCE & FINE LEDGER</span>
           <span class="kabaddi-chip bonus">₹10 FINE / ABSENT DAY</span>
-          <span class="badge" style="background:rgba(255,94,0,0.15); color:var(--accent-orange); border:1px solid rgba(255,94,0,0.3); padding:3px 10px; border-radius:12px; font-size:0.75rem;">
-            <i class="ri-edit-2-fill"></i> Coach Control
-          </span>
         </div>
         <h2 style="font-size: 1.6rem; font-weight:800;" class="text-gradient-cyan">
           ✅ Team Attendance & ₹10 Absent Fine Tracking
         </h2>
-        <p style="color:#94a3b8; font-size:0.88rem;">
-          Daily calendar-wise attendance tracking. Every 1 day absent automatically charges ₹10 penalty fine.
-        </p>
       </div>
 
       <div style="display:flex; gap:10px;">
@@ -4337,16 +4301,10 @@ function renderMyAttendanceHTML() {
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
           <span class="kabaddi-chip lion"><i class="ri-calendar-check-fill"></i> MY ATTENDANCE & FINE STATUS</span>
           <span class="kabaddi-chip bonus">JERSEY ${activePlayer.jersey}</span>
-          <span class="badge" style="background:rgba(16,185,129,0.15); color:var(--accent-green); border:1px solid rgba(16,185,129,0.3); padding:3px 10px; border-radius:12px; font-size:0.75rem;">
-            <i class="ri-eye-line"></i> Player Statement
-          </span>
         </div>
         <h2 style="font-size: 1.6rem; font-weight:800;" class="text-gradient-cyan">
           📋 ${activePlayer.name}'s Attendance & Fine Statement
         </h2>
-        <p style="color:#94a3b8; font-size:0.88rem;">
-          Rule: ₹10 Fine charged for each day absent from practice.
-        </p>
       </div>
     </div>
 
@@ -4427,7 +4385,6 @@ function renderCommunicationHTML() {
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
       <div>
         <h2 style="font-size: 1.6rem; font-weight:800;" class="text-gradient-cyan">💬 Team Communication</h2>
-        <p style="color:#94a3b8; font-size:0.88rem;">Official announcements and practice updates.</p>
       </div>
       ${isCoach ? `
         <button class="btn btn-orange" onclick="openModal('modalAnnouncement')">
@@ -4476,7 +4433,6 @@ function renderTeamMembersHTML() {
   return `
     <div style="margin-bottom: 24px;">
       <h2 style="font-size: 1.6rem; font-weight:800;" class="text-gradient-orange">👥 Team Members Overview</h2>
-      <p style="color:#94a3b8; font-size:0.88rem;">Position-wise team breakdown.</p>
     </div>
 
     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:24px;">
@@ -4716,17 +4672,12 @@ function renderFilesHTML() {
           </span>
         </div>
         <h2 style="font-size: 1.6rem; font-weight:800;" class="text-gradient-cyan">📁 Team Files, Videos & Documents</h2>
-        <p style="color:#94a3b8; font-size:0.88rem;">Tactical strategy guides, practice video clips, official rulebooks & team media.</p>
       </div>
       ${isCoach ? `
         <button class="btn btn-primary" onclick="openModalUploadFile()" style="box-shadow:var(--theme-glow);">
           <i class="ri-upload-cloud-2-line"></i> Upload New File (Create)
         </button>
-      ` : `
-        <div style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); padding:6px 14px; border-radius:12px; color:#34d399; font-size:0.82rem; font-weight:700; display:flex; align-items:center; gap:6px;">
-          <i class="ri-eye-line"></i> Player Access: View & Download Available
-        </div>
-      `}
+      ` : ''}
     </div>
 
     <!-- Category Filter Tabs -->
@@ -5015,7 +4966,6 @@ function renderMyInstructionsHTML() {
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
       <div>
         <h2 style="font-size: 1.6rem; font-weight:800;" class="text-gradient-orange">${isCoach ? '📋 All Player Instructions (Coach View)' : '📝 My Instructions'}</h2>
-        <p style="color:#94a3b8; font-size:0.88rem;">Tactical guidance and drills assigned to squad athletes.</p>
       </div>
       ${isCoach ? `
         <button class="btn btn-orange" onclick="openModalInstruction()"><i class="ri-file-add-line"></i> Give New Instruction</button>
@@ -5114,7 +5064,7 @@ function viewPlayerProfile(playerId) {
             <div style="margin-top:8px; display:flex; gap:10px; align-items:center;">
               <span class="status-pill active">● Active Squad</span>
               <button class="btn btn-sm btn-outline" style="color:var(--accent-cyan); border-color:var(--accent-cyan); padding:3px 10px; font-size:0.78rem;" onclick="openPhotoAdjusterForPlayer(${player.id})">
-                <i class="ri-crop-line"></i> ✂️ Adjust Photo (போட்டோ அட்ஜஸ்ட்)
+                <i class="ri-crop-line"></i> ✂️ Adjust Photo
               </button>
             </div>
           </div>
@@ -5229,8 +5179,7 @@ function renderProfileHTML() {
 
   return `
     <div style="margin-bottom: 24px;">
-      <h2 style="font-size: 1.6rem; font-weight:800;" class="text-gradient-cyan">👤 ${isCoach ? 'Coach Profile (Copy/Paste Real Photo)' : 'My Player Profile'}</h2>
-      <p style="color:#94a3b8; font-size:0.88rem;">Manage contact details & update real image via Ctrl+V paste or upload.</p>
+      <h2 style="font-size: 1.6rem; font-weight:800;" class="text-gradient-cyan">👤 ${isCoach ? 'Coach Profile' : 'My Player Profile'}</h2>
     </div>
 
     <div class="glass-card" style="max-width:640px;">
@@ -5245,22 +5194,21 @@ function renderProfileHTML() {
             <p style="color:var(--accent-cyan); font-weight:700; font-size:0.85rem;">${isCoach ? profile.experience : profile.position + ' (' + profile.jersey + ')'}</p>
             <div style="margin-top:6px; display:flex; gap:8px; align-items:center;">
               <button type="button" class="btn btn-sm btn-outline" style="color:var(--accent-cyan); border-color:var(--accent-cyan);" onclick="openPhotoAdjusterForCurrentProfile()">
-                <i class="ri-crop-line"></i> ✂️ Adjust / Crop Photo (போட்டோ அட்ஜஸ்ட்)
+                <i class="ri-crop-line"></i> ✂️ Adjust / Crop Photo
               </button>
             </div>
           </div>
         </div>
 
         <div class="form-group">
-          <label>Profile Photo (Click Below to Upload or Press Ctrl+V)</label>
+          <label>Upload Photo</label>
           <input type="hidden" id="profilePhotoInput" value="${profile.photo}">
           
           <input type="file" id="profileFilePicker" accept="image/*" style="display:none;" onchange="handleFileChoose(this, 'profilePhotoInput', 'profileAvatarPreview')">
           
           <div class="image-upload-dropzone" onclick="document.getElementById('profileFilePicker').click()">
             <i class="ri-image-add-line" style="font-size:1.4rem; color:var(--accent-cyan);"></i>
-            <div style="font-size:0.85rem; font-weight:700; color:#fff;">Click to Upload Image File OR Paste Copied Image (Ctrl+V)</div>
-            <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">Supports JPG, PNG, WebP real photos</div>
+            <div style="font-size:0.85rem; font-weight:700; color:#fff;">Upload Photo</div>
           </div>
         </div>
 
@@ -5287,7 +5235,7 @@ function renderProfileHTML() {
           </div>
         ` : ''}
 
-        <button type="submit" class="btn btn-primary"><i class="ri-check-double-line"></i> Save Profile & Real Photo</button>
+        <button type="submit" class="btn btn-primary"><i class="ri-check-double-line"></i> Save Profile</button>
       </form>
     </div>
   `;
@@ -5332,7 +5280,6 @@ function renderSettingsHTML() {
   return `
     <div style="margin-bottom: 24px;">
       <h2 style="font-size: 1.6rem; font-weight:800;" class="text-gradient-orange">⚙️ Settings & Theme Customization</h2>
-      <p style="color:var(--text-muted); font-size:0.88rem;">App theme style and account security preferences.</p>
     </div>
 
     <!-- Theme Customizer Section -->
@@ -5893,3 +5840,2031 @@ document.addEventListener('click', (e) => {
     dropdown.classList.remove('active');
   }
 });
+
+// ====================================================
+// 🏆 PRO KABADDI LIVE MATCH SCOREBOARD & 30s RAID TIMER
+// ====================================================
+
+let raidTimerInterval = null;
+let matchClockInterval = null;
+let soundEffectsEnabled = true;
+let audioCtx = null;
+
+function getAudioContext() {
+  if (!audioCtx) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) audioCtx = new AudioContextClass();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  return audioCtx;
+}
+
+function playMatchSound(type) {
+  if (!soundEffectsEnabled) return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    
+    if (type === 'tick') {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.08);
+    } else if (type === 'buzzer') {
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc1.type = 'sawtooth';
+      osc2.type = 'square';
+      osc1.frequency.setValueAtTime(260, now);
+      osc2.frequency.setValueAtTime(280, now);
+      gain.gain.setValueAtTime(0.45, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 1.2);
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + 1.2);
+      osc2.stop(now + 1.2);
+    } else if (type === 'whistle') {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(2400, now);
+      osc.frequency.linearRampToValueAtTime(2800, now + 0.15);
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    } else if (type === 'doodie') {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.linearRampToValueAtTime(880, now + 0.2);
+      osc.frequency.linearRampToValueAtTime(520, now + 0.4);
+      osc.frequency.linearRampToValueAtTime(880, now + 0.6);
+      gain.gain.setValueAtTime(0.35, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.7);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.7);
+    } else if (type === 'super') {
+      const freqs = [523.25, 659.25, 783.99, 1046.50];
+      freqs.forEach((f, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(f, now + (idx * 0.08));
+        gain.gain.setValueAtTime(0.28, now + (idx * 0.08));
+        gain.gain.exponentialRampToValueAtTime(0.001, now + (idx * 0.08) + 0.35);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + (idx * 0.08));
+        osc.stop(now + (idx * 0.08) + 0.35);
+      });
+    } else if (type === 'fanfare') {
+      const fanfareNotes = [
+        { f: 523.25, t: 0.0, d: 0.2 },
+        { f: 659.25, t: 0.15, d: 0.2 },
+        { f: 783.99, t: 0.3, d: 0.2 },
+        { f: 1046.50, t: 0.45, d: 0.5 },
+        { f: 1318.51, t: 0.6, d: 0.8 }
+      ];
+      fanfareNotes.forEach(n => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(n.f, now + n.t);
+        gain.gain.setValueAtTime(0.35, now + n.t);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + n.t + n.d);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + n.t);
+        osc.stop(now + n.t + n.d);
+      });
+    } else if (type === 'referee-long') {
+      // Powerful umpire double-blast whistle
+      [0, 0.28].forEach(startT => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(2600, now + startT);
+        osc.frequency.linearRampToValueAtTime(3200, now + startT + 0.12);
+        osc.frequency.linearRampToValueAtTime(2800, now + startT + 0.22);
+        gain.gain.setValueAtTime(0.48, now + startT);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + startT + 0.24);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + startT);
+        osc.stop(now + startT + 0.24);
+      });
+    } else if (type === 'bell') {
+      // Last 5 minutes warning alert chime
+      [0, 0.22, 0.44].forEach(offset => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1760, now + offset);
+        gain.gain.setValueAtTime(0.4, now + offset);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.35);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.35);
+      });
+    }
+  } catch (err) {
+    console.warn('Audio playback error:', err);
+  }
+}
+
+function checkCoachScoreboardPermission() {
+  if (appData.activeRole !== 'coach') {
+    showToast('Player-kku scoreboard control permission illai! View mattumthaan panna mudiyum.', 'ri-lock-2-line');
+    return false;
+  }
+  return true;
+}
+
+function blastRefereeWhistle() {
+  if (!checkCoachScoreboardPermission()) return;
+  playMatchSound('referee-long');
+  showToast('📢 Naduvar Whistle Saththam Oliththathu! (Referee Whistle Blown!)', 'ri-volume-up-fill');
+  addMatchEventLog('📢 Naduvar Whistle: Aattam Nirutham / Thodakkam', 'system');
+}
+
+function announceLast5Minutes() {
+  if (!checkCoachScoreboardPermission()) return;
+  playMatchSound('bell');
+  showToast('⏱️ Kadaisi 5 Mins Aattam! (Official Last 5 Minutes Call!)', 'ri-alarm-warning-fill');
+  addMatchEventLog('⏱️ Naduvar Arivippu: Kadaisi 5 Nimidam Aattam Thodangiyathu!', 'warning');
+}
+
+function ensureLiveMatchData() {
+  if (!appData.liveMatch) {
+    appData.liveMatch = {
+      teamA: {
+        name: 'Thaai Tamizhans (Valayapatti)',
+        shortName: 'TTKC',
+        score: 0,
+        playersOnCourt: 7,
+        totalPlayers: 7,
+        raidPoints: 0,
+        tacklePoints: 0,
+        allOutPoints: 0,
+        bonusPoints: 0
+      },
+      teamB: {
+        name: 'Madurai Veeran (Melur)',
+        shortName: 'OPP',
+        score: 0,
+        playersOnCourt: 7,
+        totalPlayers: 7,
+        raidPoints: 0,
+        tacklePoints: 0,
+        allOutPoints: 0,
+        bonusPoints: 0
+      },
+      currentHalf: '1st Half',
+      matchDurationMinutes: 40,
+      matchTimeRemaining: 1200,
+      isMatchClockRunning: false,
+      raidTimeRemaining: 30,
+      isRaidRunning: false,
+      isDoOrDie: false,
+      activeRaidingTeam: 'teamA',
+      actionLog: [
+        { time: '00:00', text: '🏆 Live Match Scoreboard Ready: Thaai Tamizhans vs Madurai Veeran', type: 'system' }
+      ],
+      historyStack: []
+    };
+    saveAppData(appData);
+  }
+  if (appData.liveMatch && appData.liveMatch.teamB && appData.liveMatch.teamB.name && (appData.liveMatch.teamB.name.includes('எதிரணி') || appData.liveMatch.teamB.name.includes('மதுரை வீரன்'))) {
+    appData.liveMatch.teamB.name = 'Madurai Veeran (Melur)';
+  }
+  if (appData.liveMatch && appData.liveMatch.teamA && appData.liveMatch.teamA.name && appData.liveMatch.teamA.name.includes('தாய் தமிழன்ஸ்')) {
+    appData.liveMatch.teamA.name = 'Thaai Tamizhans (Valayapatti)';
+  }
+  return appData.liveMatch;
+}
+
+// ----------------------------------------------------
+// RAID TIMER CONTROLS
+// ----------------------------------------------------
+function toggleRaidTimer() {
+  if (!checkCoachScoreboardPermission()) return;
+  const lm = ensureLiveMatchData();
+  if (lm.isRaidRunning) {
+    pauseRaidTimer();
+  } else {
+    startRaidTimer();
+  }
+}
+
+function startRaidTimer() {
+  if (!checkCoachScoreboardPermission()) return;
+  const lm = ensureLiveMatchData();
+  if (lm.raidTimeRemaining <= 0) {
+    lm.raidTimeRemaining = 30;
+  }
+  lm.isRaidRunning = true;
+  clearInterval(raidTimerInterval);
+  
+  playMatchSound('whistle');
+
+  raidTimerInterval = setInterval(() => {
+    if (lm.raidTimeRemaining > 0) {
+      lm.raidTimeRemaining--;
+      if (lm.raidTimeRemaining <= 5 && lm.raidTimeRemaining > 0) {
+        playMatchSound('tick');
+      }
+      updateRaidDisplayDOM();
+    } else {
+      pauseRaidTimer();
+      playMatchSound('buzzer');
+      showToast('⚠️ 30-Second Raid Time Expired!', 'ri-alarm-warning-line');
+      addMatchEventLog(`⏱️ 30s Raid Time Expired for ${lm.activeRaidingTeam === 'teamA' ? lm.teamA.name : lm.teamB.name}`, 'warning');
+    }
+  }, 1000);
+
+  updateRaidDisplayDOM();
+}
+
+function pauseRaidTimer() {
+  const lm = ensureLiveMatchData();
+  lm.isRaidRunning = false;
+  clearInterval(raidTimerInterval);
+  updateRaidDisplayDOM();
+}
+
+function resetRaidTimer(secs = 30) {
+  if (!checkCoachScoreboardPermission()) return;
+  const lm = ensureLiveMatchData();
+  clearInterval(raidTimerInterval);
+  lm.isRaidRunning = false;
+  lm.raidTimeRemaining = secs;
+  updateRaidDisplayDOM();
+}
+
+function updateLiveScoreboardDOM() {
+  const container = document.getElementById('mainViewContainer');
+  if (container && currentView === 'live-scoreboard') {
+    container.innerHTML = renderLiveScoreboardHTML();
+  }
+}
+
+function toggleDoOrDie() {
+  if (!checkCoachScoreboardPermission()) return;
+  const lm = ensureLiveMatchData();
+  lm.isDoOrDie = !lm.isDoOrDie;
+  if (lm.isDoOrDie) {
+    playMatchSound('doodie');
+    showToast('⚡ DO OR DIE RAID ACTIVATED! Must score a point!', 'ri-fire-fill');
+    addMatchEventLog(`⚡ DO OR DIE RAID triggered for ${lm.activeRaidingTeam === 'teamA' ? lm.teamA.name : lm.teamB.name}!`, 'doodie');
+  }
+  saveAppData(appData);
+  updateLiveScoreboardDOM();
+}
+
+function setRaidingTeam(teamKey) {
+  if (!checkCoachScoreboardPermission()) return;
+  const lm = ensureLiveMatchData();
+  lm.activeRaidingTeam = teamKey;
+  resetRaidTimer(30);
+  showToast(`🎯 Raiding Team: ${teamKey === 'teamA' ? lm.teamA.name : lm.teamB.name}`, 'ri-run-line');
+  saveAppData(appData);
+  updateLiveScoreboardDOM();
+}
+
+function updateRaidDisplayDOM() {
+  const lm = ensureLiveMatchData();
+  const digitEl = document.getElementById('raidTimerSeconds');
+  const ringEl = document.getElementById('raidTimerRing');
+  const btnEl = document.getElementById('raidTimerToggleBtn');
+  
+  if (digitEl) {
+    digitEl.innerText = lm.raidTimeRemaining;
+    if (lm.raidTimeRemaining <= 5) {
+      digitEl.className = 'raid-seconds-num critical-pulse';
+    } else if (lm.raidTimeRemaining <= 10) {
+      digitEl.className = 'raid-seconds-num warning-yellow';
+    } else {
+      digitEl.className = 'raid-seconds-num normal';
+    }
+  }
+
+  if (ringEl) {
+    // Circumference = 2 * PI * 54 ≈ 339.29
+    const maxOffset = 339.29;
+    const progress = Math.max(0, lm.raidTimeRemaining / 30);
+    const strokeDash = maxOffset * (1 - progress);
+    ringEl.style.strokeDashoffset = strokeDash;
+    if (lm.raidTimeRemaining <= 5) {
+      ringEl.style.stroke = 'var(--accent-red)';
+    } else if (lm.raidTimeRemaining <= 10) {
+      ringEl.style.stroke = '#f59e0b';
+    } else {
+      ringEl.style.stroke = 'var(--accent-orange)';
+    }
+  }
+
+  if (btnEl) {
+    btnEl.innerHTML = lm.isRaidRunning
+      ? '<i class="ri-pause-fill"></i> <span>Pause Raid</span>'
+      : '<i class="ri-play-fill"></i> <span>Start Raid</span>';
+    btnEl.className = lm.isRaidRunning ? 'raid-btn pause' : 'raid-btn start';
+  }
+}
+
+// ----------------------------------------------------
+// 20-MINUTE MATCH CLOCK CONTROLS
+// ----------------------------------------------------
+function toggleMatchClock() {
+  if (!checkCoachScoreboardPermission()) return;
+  const lm = ensureLiveMatchData();
+  if (lm.isMatchClockRunning) {
+    pauseMatchClock();
+  } else {
+    startMatchClock();
+  }
+}
+
+function startMatchClock() {
+  if (!checkCoachScoreboardPermission()) return;
+  const lm = ensureLiveMatchData();
+  lm.isMatchClockRunning = true;
+  clearInterval(matchClockInterval);
+  
+  matchClockInterval = setInterval(() => {
+    if (lm.matchTimeRemaining > 0) {
+      lm.matchTimeRemaining--;
+      updateMatchClockDOM();
+    } else {
+      pauseMatchClock();
+      playMatchSound('buzzer');
+      showToast(`🏁 ${lm.currentHalf} Time Up!`, 'ri-flag-line');
+      addMatchEventLog(`🏁 ${lm.currentHalf} Time Over!`, 'system');
+    }
+  }, 1000);
+  
+  updateMatchClockDOM();
+}
+
+function pauseMatchClock() {
+  const lm = ensureLiveMatchData();
+  lm.isMatchClockRunning = false;
+  clearInterval(matchClockInterval);
+  updateMatchClockDOM();
+}
+
+function resetMatchClock() {
+  if (!checkCoachScoreboardPermission()) return;
+  const lm = ensureLiveMatchData();
+  clearInterval(matchClockInterval);
+  lm.isMatchClockRunning = false;
+  lm.matchTimeRemaining = 1200; // 20 mins
+  updateMatchClockDOM();
+}
+
+function setMatchHalf(halfStr) {
+  if (!checkCoachScoreboardPermission()) return;
+  const lm = ensureLiveMatchData();
+  lm.currentHalf = halfStr;
+  resetMatchClock();
+  addMatchEventLog(`📢 Match Segment Changed: ${halfStr}`, 'system');
+  saveAppData(appData);
+  updateLiveScoreboardDOM();
+}
+
+function formatClockTime(totalSeconds) {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function updateMatchClockDOM() {
+  const lm = ensureLiveMatchData();
+  const el = document.getElementById('matchClockDisplay');
+  const btn = document.getElementById('matchClockToggleBtn');
+  if (el) el.innerText = formatClockTime(lm.matchTimeRemaining);
+  if (btn) {
+    btn.innerHTML = lm.isMatchClockRunning
+      ? '<i class="ri-pause-circle-fill"></i>'
+      : '<i class="ri-play-circle-fill"></i>';
+    btn.title = lm.isMatchClockRunning ? 'Pause Match Clock' : 'Start Match Clock';
+  }
+}
+
+// ----------------------------------------------------
+// PRO KABADDI POINT & COURT ENGINE
+// ----------------------------------------------------
+function pushHistorySnapshot() {
+  const lm = ensureLiveMatchData();
+  if (!lm.historyStack) lm.historyStack = [];
+  // Keep last 15 actions for undo
+  const snapshot = {
+    teamA: JSON.parse(JSON.stringify(lm.teamA)),
+    teamB: JSON.parse(JSON.stringify(lm.teamB)),
+    currentHalf: lm.currentHalf,
+    raidTimeRemaining: lm.raidTimeRemaining,
+    matchTimeRemaining: lm.matchTimeRemaining,
+    isDoOrDie: lm.isDoOrDie,
+    activeRaidingTeam: lm.activeRaidingTeam,
+    actionLog: JSON.parse(JSON.stringify(lm.actionLog))
+  };
+  lm.historyStack.push(snapshot);
+  if (lm.historyStack.length > 20) lm.historyStack.shift();
+}
+
+function undoLastMatchAction() {
+  if (!checkCoachScoreboardPermission()) return;
+  const lm = ensureLiveMatchData();
+  if (!lm.historyStack || lm.historyStack.length === 0) {
+    showToast('⚠️ No actions left to undo!', 'ri-information-line');
+    return;
+  }
+  const lastState = lm.historyStack.pop();
+  lm.teamA = lastState.teamA;
+  lm.teamB = lastState.teamB;
+  lm.currentHalf = lastState.currentHalf;
+  lm.raidTimeRemaining = lastState.raidTimeRemaining;
+  lm.matchTimeRemaining = lastState.matchTimeRemaining;
+  lm.isDoOrDie = lastState.isDoOrDie;
+  lm.activeRaidingTeam = lastState.activeRaidingTeam;
+  lm.actionLog = lastState.actionLog;
+
+  saveAppData(appData);
+  showToast('↩️ Last action undone successfully', 'ri-arrow-go-back-line');
+  updateLiveScoreboardDOM();
+}
+
+function addMatchEventLog(text, type = 'normal') {
+  const lm = ensureLiveMatchData();
+  if (!lm.actionLog) lm.actionLog = [];
+  const timeStr = formatClockTime(1200 - lm.matchTimeRemaining);
+  lm.actionLog.unshift({ time: timeStr, text, type, ts: Date.now() });
+  if (lm.actionLog.length > 50) lm.actionLog.pop();
+}
+
+function syncCurrentScheduledMatchScores() {
+  const lm = ensureLiveMatchData();
+  const currentSched = (appData.scheduledMatches || []).find(m => m.id === lm.activeScheduledMatchId);
+  if (currentSched) {
+    currentSched.scoreA = lm.teamA.score;
+    currentSched.scoreB = lm.teamB.score;
+    if (currentSched.status === 'Scheduled') {
+      currentSched.status = 'Live';
+    }
+  }
+}
+
+function scoreRaidPoint(teamKey, points, isBonus = false) {
+  if (!checkCoachScoreboardPermission()) return;
+  pushHistorySnapshot();
+  const lm = ensureLiveMatchData();
+  const scoringTeam = teamKey === 'teamA' ? lm.teamA : lm.teamB;
+  const opposingTeam = teamKey === 'teamA' ? lm.teamB : lm.teamA;
+  
+  scoringTeam.score += points;
+
+  if (isBonus) {
+    scoringTeam.bonusPoints += points;
+    scoringTeam.raidPoints += points;
+    playMatchSound('whistle');
+    addMatchEventLog(`⭐ +${points} BONUS Point scored by ${scoringTeam.name}!`, 'bonus');
+    showToast(`⭐ +${points} Bonus Point for ${scoringTeam.name}!`, 'ri-star-fill');
+  } else {
+    scoringTeam.raidPoints += points;
+    
+    // Revive players for scoring team
+    if (scoringTeam.playersOnCourt < 7) {
+      const revived = Math.min(points, 7 - scoringTeam.playersOnCourt);
+      scoringTeam.playersOnCourt += revived;
+    }
+
+    // Put opposing players OUT
+    opposingTeam.playersOnCourt = Math.max(0, opposingTeam.playersOnCourt - points);
+
+    if (points >= 3) {
+      playMatchSound('super');
+      showToast(`🔥💥 SUPER RAID! +${points} Points for ${scoringTeam.name}!`, 'ri-fire-fill');
+      addMatchEventLog(`🔥💥 SUPER RAID: +${points} Touch Points by ${scoringTeam.name}! (${opposingTeam.name} court: ${opposingTeam.playersOnCourt}/7)`, 'super');
+    } else {
+      playMatchSound('whistle');
+      showToast(`⚡ +${points} Touch Point(s) for ${scoringTeam.name}`, 'ri-run-line');
+      addMatchEventLog(`⚡ +${points} Touch Point by ${scoringTeam.name} (${opposingTeam.name} players: ${opposingTeam.playersOnCourt}/7)`, 'touch');
+    }
+
+    // Auto-check All-Out
+    if (opposingTeam.playersOnCourt === 0) {
+      scoreAllOut(teamKey);
+    }
+  }
+
+  // Turn off do-or-die and switch raid team
+  lm.isDoOrDie = false;
+  lm.activeRaidingTeam = (teamKey === 'teamA') ? 'teamB' : 'teamA';
+  resetRaidTimer(30);
+
+  syncCurrentScheduledMatchScores();
+  saveAppData(appData);
+  updateLiveScoreboardDOM();
+}
+
+function scoreTacklePoint(defendingTeamKey, isSuperTackle = false) {
+  if (!checkCoachScoreboardPermission()) return;
+  pushHistorySnapshot();
+  const lm = ensureLiveMatchData();
+  const defendingTeam = defendingTeamKey === 'teamA' ? lm.teamA : lm.teamB;
+  const raidingTeam = defendingTeamKey === 'teamA' ? lm.teamB : lm.teamA;
+
+  // If super tackle (defenders <= 3) -> 2 points
+  const points = (isSuperTackle || defendingTeam.playersOnCourt <= 3) ? 2 : 1;
+  defendingTeam.score += points;
+  defendingTeam.tacklePoints += points;
+
+  // Revive 1 defender
+  if (defendingTeam.playersOnCourt < 7) {
+    defendingTeam.playersOnCourt += 1;
+  }
+
+  // Raiding player is out
+  raidingTeam.playersOnCourt = Math.max(0, raidingTeam.playersOnCourt - 1);
+
+  if (points === 2) {
+    playMatchSound('super');
+    showToast(`🛡️💥 SUPER TACKLE! +2 Points for ${defendingTeam.name}!`, 'ri-shield-flash-fill');
+    addMatchEventLog(`🛡️💥 SUPER TACKLE: +2 Points by ${defendingTeam.name}! Raider is OUT.`, 'super');
+  } else {
+    playMatchSound('whistle');
+    showToast(`🛡️ +1 Tackle Point for ${defendingTeam.name}`, 'ri-shield-line');
+    addMatchEventLog(`🛡️ +1 Tackle Point by ${defendingTeam.name}. Raider is OUT.`, 'tackle');
+  }
+
+  // Auto-check All-Out for raiding team
+  if (raidingTeam.playersOnCourt === 0) {
+    scoreAllOut(defendingTeamKey);
+  }
+
+  // Next raid switches to defending team
+  lm.isDoOrDie = false;
+  lm.activeRaidingTeam = defendingTeamKey;
+  resetRaidTimer(30);
+
+  syncCurrentScheduledMatchScores();
+  saveAppData(appData);
+  updateLiveScoreboardDOM();
+}
+
+function scoreAllOut(inflictingTeamKey) {
+  if (!checkCoachScoreboardPermission()) return;
+  const lm = ensureLiveMatchData();
+  const inflictingTeam = inflictingTeamKey === 'teamA' ? lm.teamA : lm.teamB;
+  const victimTeam = inflictingTeamKey === 'teamA' ? lm.teamB : lm.teamA;
+
+  inflictingTeam.score += 2;
+  inflictingTeam.allOutPoints += 2;
+  
+  // Revive all 7 players of victim team
+  victimTeam.playersOnCourt = 7;
+
+  playMatchSound('super');
+  showToast(`👑 ALL-OUT! +2 Extra Points for ${inflictingTeam.name}! All 7 players revived!`, 'ri-trophy-fill');
+  addMatchEventLog(`👑 ALL-OUT inflicted on ${victimTeam.name}! +2 All-Out Points for ${inflictingTeam.name}. All 7 players back on mat.`, 'super');
+
+  syncCurrentScheduledMatchScores();
+  saveAppData(appData);
+  updateLiveScoreboardDOM();
+}
+
+function recordEmptyRaid() {
+  if (!checkCoachScoreboardPermission()) return;
+  pushHistorySnapshot();
+  const lm = ensureLiveMatchData();
+  const raidingTeamName = lm.activeRaidingTeam === 'teamA' ? lm.teamA.name : lm.teamB.name;
+  
+  playMatchSound('whistle');
+  addMatchEventLog(`⚪ Empty Raid by ${raidingTeamName} (0 Pts)`, 'empty');
+  showToast(`⚪ Empty Raid completed by ${raidingTeamName}`, 'ri-checkbox-blank-circle-line');
+
+  // Switch raid team
+  lm.isDoOrDie = false;
+  lm.activeRaidingTeam = (lm.activeRaidingTeam === 'teamA') ? 'teamB' : 'teamA';
+  resetRaidTimer(30);
+
+  saveAppData(appData);
+  updateLiveScoreboardDOM();
+}
+
+function addTechnicalPoint(teamKey) {
+  if (!checkCoachScoreboardPermission()) return;
+  pushHistorySnapshot();
+  const lm = ensureLiveMatchData();
+  const team = teamKey === 'teamA' ? lm.teamA : lm.teamB;
+  team.score += 1;
+  
+  playMatchSound('whistle');
+  showToast(`⚖️ +1 Technical Point for ${team.name}`, 'ri-scales-3-line');
+  addMatchEventLog(`⚖️ +1 Technical Point awarded to ${team.name}`, 'technical');
+
+  syncCurrentScheduledMatchScores();
+  saveAppData(appData);
+  updateLiveScoreboardDOM();
+}
+
+function editOpponentTeamName() {
+  if (!checkCoachScoreboardPermission()) return;
+  const lm = ensureLiveMatchData();
+  const current = lm.teamB.name;
+  const input = prompt('Enter Opponent Team Name:', current);
+  if (input && input.trim()) {
+    lm.teamB.name = input.trim();
+    const currentSched = (appData.scheduledMatches || []).find(m => m.id === lm.activeScheduledMatchId);
+    if (currentSched) {
+      currentSched.teamB = input.trim();
+    }
+    saveAppData(appData);
+    updateLiveScoreboardDOM();
+    showToast(`✅ Opponent name updated: ${input.trim()}`, 'ri-check-line');
+  }
+}
+
+function toggleSoundEffects() {
+  soundEffectsEnabled = !soundEffectsEnabled;
+  if (soundEffectsEnabled) playMatchSound('whistle');
+  showToast(soundEffectsEnabled ? '🔊 Match Sounds & Buzzer: ON' : '🔇 Match Sounds: MUTED', 'ri-volume-up-line');
+  updateLiveScoreboardDOM();
+}
+
+function shareMatchToWhatsApp() {
+  const lm = ensureLiveMatchData();
+  const tA = lm.teamA;
+  const tB = lm.teamB;
+  const currentSched = (appData.scheduledMatches || []).find(m => m.id === lm.activeScheduledMatchId);
+  const tournName = currentSched ? currentSched.tournament : 'Oor Thiruvizha Kabaddi Potti';
+  const groundInfo = currentSched ? (currentSched.groundType + ' • ' + currentSched.venue) : 'Semmann Kalam';
+  const prizeInfo = currentSched ? currentSched.firstPrize : 'Rs.25,000 + Suzhar Koppai 🏆';
+
+  let leading = '';
+  if (tA.score > tB.score) {
+    leading = `🔥 ${tA.name} ${tA.score - tB.score} Pulligal Munnilaiyil Vetri Nadai!`;
+  } else if (tB.score > tA.score) {
+    leading = `⚡ ${tB.name} ${tB.score - tA.score} Pulligal Munnilaiyil Ullathu!`;
+  } else {
+    leading = `🤝 Samanilai Aattam (${tA.score} - ${tB.score})! Paraparappana Aattam!`;
+  }
+
+  const text = `🌾 *${tournName}* 🌾\n` +
+    `🏆 *LIVE MATCH SCOREBOARD (Nerlai Nilavaram)* 🏆\n\n` +
+    `📍 *Aadukalam*: ${groundInfo}\n` +
+    `🥇 *1st Prize*: ${prizeInfo}\n\n` +
+    `🔴 *${tA.name}*: ${tA.score} Pulligal (Pts)\n` +
+    `🔵 *${tB.name}*: ${tB.score} Pulligal (Pts)\n\n` +
+    `⏱️ *Match Nilai*: ${lm.currentHalf} (Meetham Ulla Neram: ${formatClockTime(lm.matchTimeRemaining)})\n` +
+    `📊 *Tharpothaiya Mudivu*: ${leading}\n` +
+    `⚖️ *Naduvar Rule*: Naduvar theerpe iruthiyanathu!\n\n` +
+    `⚔️ *${tA.name} Pulli Vivaram*:\n` +
+    `• Raid Pulligal: ${tA.raidPoints}\n` +
+    `• Tackle / Pidi Pulligal: ${tA.tacklePoints}\n` +
+    `• Bonus Pulligal: ${tA.bonusPoints}\n` +
+    `• Lona / All-Out: ${tA.allOutPoints}\n` +
+    `• Kalam Irangiya Veerargal: ${tA.playersOnCourt}/7\n\n` +
+    `Vaazhthukkal! #LocalKabaddi #TamilNaduKabaddi #OorThiruvizhaKabaddi`;
+
+  const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+  window.open(url, '_blank');
+}
+
+function finishAndSaveMatch() {
+  if (!checkCoachScoreboardPermission()) return;
+  const lm = ensureLiveMatchData();
+  const tA = lm.teamA;
+  const tB = lm.teamB;
+
+  if (!confirm(`Are you sure you want to finish and archive this match?\n${tA.name}: ${tA.score} vs ${tB.name}: ${tB.score}`)) {
+    return;
+  }
+
+  let resultStr = '';
+  let winKey = null;
+  if (tA.score > tB.score) {
+    resultStr = `${tA.name} Won by ${tA.score - tB.score} Points 🏆`;
+    winKey = 'teamA';
+  } else if (tB.score > tA.score) {
+    resultStr = `${tB.name} Won by ${tB.score - tA.score} Points 🏆`;
+    winKey = 'teamB';
+  } else {
+    resultStr = `Match Tied (${tA.score} - ${tB.score}) 🤝`;
+  }
+
+  // Sync with active scheduled match if present
+  const scheduledMatches = appData.scheduledMatches || [];
+  const currentSched = scheduledMatches.find(m => m.id === lm.activeScheduledMatchId);
+  if (currentSched) {
+    currentSched.status = 'Completed';
+    currentSched.winner = winKey;
+    currentSched.scoreA = tA.score;
+    currentSched.scoreB = tB.score;
+    currentSched.result = resultStr;
+  }
+
+  const newSaved = {
+    id: Date.now(),
+    scheduledMatchId: lm.activeScheduledMatchId || null,
+    date: currentSched ? currentSched.date : new Date().toISOString().split('T')[0],
+    tournament: currentSched ? currentSched.tournament : 'State / Local Match',
+    venue: currentSched ? currentSched.venue : 'Home Arena Stadium',
+    teamA: tA.name,
+    teamB: tB.name,
+    scoreA: tA.score,
+    scoreB: tB.score,
+    result: resultStr,
+    winner: winKey,
+    bestRaider: `${appData.players && appData.players[0] ? appData.players[0].name : 'Raider'} - ${tA.raidPoints} Pts`,
+    bestDefender: `${appData.players && appData.players[1] ? appData.players[1].name : 'Defender'} - ${tA.tacklePoints} Pts`
+  };
+
+  if (!appData.savedMatches) appData.savedMatches = [];
+  appData.savedMatches = appData.savedMatches.filter(m => m.scheduledMatchId !== lm.activeScheduledMatchId);
+  appData.savedMatches.unshift(newSaved);
+
+  // Push notification for the team
+  if (!appData.notifications) appData.notifications = [];
+  appData.notifications.unshift({
+    id: Date.now(),
+    title: `🏆 Match Result: ${tA.name} ${tA.score} - ${tB.score} ${tB.name}`,
+    desc: `Match concluded: ${resultStr}. Congratulations!`,
+    time: 'Just now',
+    target: 'all',
+    type: 'notice',
+    icon: 'ri-trophy-fill',
+    actionView: 'live-scoreboard',
+    senderRole: 'coach',
+    senderName: 'Coach Rajan',
+    read: false,
+    readByPlayers: []
+  });
+
+  saveAppData(appData);
+  showToast(`🎉 Match archived successfully! (${resultStr})`, 'ri-award-fill');
+  updateLiveScoreboardDOM();
+}
+
+function resetLiveMatchScores() {
+  if (!checkCoachScoreboardPermission()) return;
+  pauseRaidTimer();
+  pauseMatchClock();
+  const lm = ensureLiveMatchData();
+  const currentTeamA = lm.teamA.name || 'Thaai Tamizhans (Valayapatti)';
+  const currentTeamB = lm.teamB.name || 'Madurai Veeran (Melur)';
+  const currentSchedId = lm.activeScheduledMatchId || 'match-1';
+
+  appData.liveMatch = {
+    activeScheduledMatchId: currentSchedId,
+    teamA: {
+      name: currentTeamA,
+      shortName: 'TTKC',
+      score: 0,
+      playersOnCourt: 7,
+      totalPlayers: 7,
+      raidPoints: 0,
+      tacklePoints: 0,
+      allOutPoints: 0,
+      bonusPoints: 0
+    },
+    teamB: {
+      name: currentTeamB,
+      shortName: 'OPP',
+      score: 0,
+      playersOnCourt: 7,
+      totalPlayers: 7,
+      raidPoints: 0,
+      tacklePoints: 0,
+      allOutPoints: 0,
+      bonusPoints: 0
+    },
+    currentHalf: '1st Half',
+    matchDurationMinutes: 40,
+    matchTimeRemaining: 1200,
+    isMatchClockRunning: false,
+    raidTimeRemaining: 30,
+    isRaidRunning: false,
+    isDoOrDie: false,
+    activeRaidingTeam: 'teamA',
+    actionLog: [
+      { time: '00:00', text: `🏆 Match Scoreboard Ready: ${currentTeamA} vs ${currentTeamB}`, type: 'system' }
+    ],
+    historyStack: []
+  };
+
+  // If active scheduled match, reset its scores
+  const currentSched = (appData.scheduledMatches || []).find(m => m.id === currentSchedId);
+  if (currentSched) {
+    currentSched.scoreA = 0;
+    currentSched.scoreB = 0;
+    currentSched.status = 'Live';
+    currentSched.winner = null;
+  }
+
+  saveAppData(appData);
+  updateLiveScoreboardDOM();
+}
+
+// ----------------------------------------------------
+// MATCH SCHEDULE STATE & TAB CONTROLS
+// ----------------------------------------------------
+let scoreboardTab = localStorage.getItem('thaai_tamizhans_scoreboard_tab') || 'schedule'; // 'schedule' | 'arena'
+let scheduleFilterTab = 'all'; // 'all' | 'live' | 'scheduled' | 'completed'
+
+function switchScoreboardTab(tab) {
+  scoreboardTab = tab;
+  localStorage.setItem('thaai_tamizhans_scoreboard_tab', tab);
+  updateLiveScoreboardDOM();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function setScheduleFilter(filter) {
+  scheduleFilterTab = filter;
+  updateLiveScoreboardDOM();
+}
+
+function openScheduledMatch(matchId) {
+  const matches = appData.scheduledMatches || [];
+  const match = matches.find(m => m.id === matchId);
+  if (!match) return;
+
+  const lm = ensureLiveMatchData();
+  lm.activeScheduledMatchId = match.id;
+  lm.teamA.name = match.teamA;
+  lm.teamB.name = match.teamB;
+
+  // Load scores if match has recorded score
+  if (match.status === 'Completed' || (match.scoreA > 0 || match.scoreB > 0)) {
+    lm.teamA.score = match.scoreA || 0;
+    lm.teamB.score = match.scoreB || 0;
+  }
+
+  // If match was upcoming, set to Live
+  if (match.status === 'Scheduled') {
+    match.status = 'Live';
+    addMatchEventLog(`⚡ Live Scoreboard started for Match #${match.matchNumber || ''}: ${match.teamA} vs ${match.teamB}`, 'system');
+  }
+
+  saveAppData(appData);
+  switchScoreboardTab('arena');
+  showToast(`⚡ Loaded: ${match.teamA} vs ${match.teamB}`, 'ri-broadcast-fill');
+}
+
+function openScheduleMatchModal(editId = null) {
+  const form = document.getElementById('formScheduleMatch');
+  if (form) form.reset();
+
+  const idInput = document.getElementById('matchSchedEditId');
+  const dateInput = document.getElementById('matchSchedDate');
+  if (dateInput && !dateInput.value) {
+    dateInput.value = new Date().toISOString().split('T')[0];
+  }
+
+  if (editId) {
+    const match = (appData.scheduledMatches || []).find(m => m.id === editId);
+    if (match) {
+      if (idInput) idInput.value = match.id;
+      document.getElementById('matchSchedTournament').value = match.tournament || '';
+      document.getElementById('matchSchedTeamA').value = match.teamA || '';
+      document.getElementById('matchSchedTeamB').value = match.teamB || '';
+      document.getElementById('matchSchedDate').value = match.date || '';
+      document.getElementById('matchSchedTime').value = match.time || '';
+      document.getElementById('matchSchedVenue').value = match.venue || '';
+      document.getElementById('matchSchedRound').value = match.round || 'Round 1 (Mudhal Sutru)';
+      document.getElementById('matchSchedNotes').value = match.notes || '';
+      if (document.getElementById('matchSchedFirstPrize')) document.getElementById('matchSchedFirstPrize').value = match.firstPrize || 'Rs.25,000 + Suzhar Koppai 🏆';
+      if (document.getElementById('matchSchedWeight')) document.getElementById('matchSchedWeight').value = match.weightCategory || '65 Kg Weight (Standard)';
+      if (document.getElementById('matchSchedGroundType')) document.getElementById('matchSchedGroundType').value = match.groundType || 'Semmann Kalam (Red Soil)';
+      if (document.getElementById('matchSchedEntryFee')) document.getElementById('matchSchedEntryFee').value = match.entryFee || 'Rs.500';
+      if (document.getElementById('matchSchedRefereeRule')) document.getElementById('matchSchedRefereeRule').value = match.refereeRule || 'Naduvar theerpe iruthiyanathu! Koopidum podhu udane kalam iranga vendum.';
+      const posterVal = match.posterImage || 'assets/match_notice_poster.jpg';
+      if (document.getElementById('matchSchedPoster')) document.getElementById('matchSchedPoster').value = posterVal;
+      if (document.getElementById('matchSchedPreview')) document.getElementById('matchSchedPreview').src = posterVal;
+    }
+  } else {
+    if (idInput) idInput.value = '';
+    document.getElementById('matchSchedTeamA').value = 'Thaai Tamizhans (Valayapatti)';
+    if (document.getElementById('matchSchedFirstPrize')) document.getElementById('matchSchedFirstPrize').value = 'Rs.25,000 + Suzhar Koppai 🏆';
+    if (document.getElementById('matchSchedWeight')) document.getElementById('matchSchedWeight').value = '65 Kg Weight (Standard)';
+    if (document.getElementById('matchSchedGroundType')) document.getElementById('matchSchedGroundType').value = 'Semmann Kalam (Red Soil)';
+    if (document.getElementById('matchSchedEntryFee')) document.getElementById('matchSchedEntryFee').value = 'Rs.500';
+    if (document.getElementById('matchSchedRefereeRule')) document.getElementById('matchSchedRefereeRule').value = 'Naduvar theerpe iruthiyanathu! Koopidum podhu udane kalam iranga vendum.';
+    if (document.getElementById('matchSchedPoster')) document.getElementById('matchSchedPoster').value = 'assets/match_notice_poster.jpg';
+    if (document.getElementById('matchSchedPreview')) document.getElementById('matchSchedPreview').src = 'assets/match_notice_poster.jpg';
+  }
+
+  openModal('modalScheduleMatch');
+}
+
+function handleSaveScheduledMatch(event) {
+  event.preventDefault();
+  const editId = document.getElementById('matchSchedEditId').value;
+  const tournament = document.getElementById('matchSchedTournament').value.trim();
+  const teamA = document.getElementById('matchSchedTeamA').value.trim();
+  const teamB = document.getElementById('matchSchedTeamB').value.trim();
+  const date = document.getElementById('matchSchedDate').value;
+  const time = document.getElementById('matchSchedTime').value.trim();
+  const venue = document.getElementById('matchSchedVenue').value.trim();
+  const round = document.getElementById('matchSchedRound').value;
+  const notes = document.getElementById('matchSchedNotes').value.trim();
+  const firstPrize = (document.getElementById('matchSchedFirstPrize') ? document.getElementById('matchSchedFirstPrize').value.trim() : '') || 'Rs.25,000 + Suzhar Koppai 🏆';
+  const weightCategory = (document.getElementById('matchSchedWeight') ? document.getElementById('matchSchedWeight').value : '') || '65 Kg Weight (Standard)';
+  const groundType = (document.getElementById('matchSchedGroundType') ? document.getElementById('matchSchedGroundType').value : '') || 'Semmann Kalam (Red Soil)';
+  const entryFee = (document.getElementById('matchSchedEntryFee') ? document.getElementById('matchSchedEntryFee').value.trim() : '') || 'Rs.500';
+  const refereeRule = (document.getElementById('matchSchedRefereeRule') ? document.getElementById('matchSchedRefereeRule').value.trim() : '') || 'Naduvar theerpe iruthiyanathu! Koopidum podhu udane kalam iranga vendum.';
+  const posterImage = (document.getElementById('matchSchedPoster') ? document.getElementById('matchSchedPoster').value : '') || 'assets/match_notice_poster.jpg';
+
+  if (!appData.scheduledMatches) appData.scheduledMatches = [];
+
+  if (editId) {
+    const idx = appData.scheduledMatches.findIndex(m => m.id === editId);
+    if (idx !== -1) {
+      appData.scheduledMatches[idx] = Object.assign(appData.scheduledMatches[idx], {
+        tournament, teamA, teamB, date, time, venue, round, notes, posterImage,
+        firstPrize, weightCategory, groundType, entryFee, refereeRule
+      });
+      showToast('Local Match schedule maatrapattathu!', 'ri-check-line');
+    }
+  } else {
+    const newId = 'match-' + Date.now();
+    const newMatch = {
+      id: newId,
+      matchNumber: appData.scheduledMatches.length + 1,
+      tournament,
+      round,
+      teamA,
+      teamB,
+      date,
+      time,
+      venue,
+      groundType,
+      weightCategory,
+      firstPrize,
+      entryFee,
+      refereeRule,
+      posterImage,
+      status: 'Scheduled',
+      winner: null,
+      scoreA: 0,
+      scoreB: 0,
+      notes
+    };
+    appData.scheduledMatches.unshift(newMatch);
+
+    // Push notification for team
+    if (!appData.notifications) appData.notifications = [];
+    appData.notifications.unshift({
+      id: Date.now(),
+      title: `📅 Pudhu Kabaddi Potti: ${teamA} vs ${teamB}`,
+      desc: `${tournament} (${round}) • ${date} ${time} @ ${venue} [${groundType}]`,
+      time: 'Just now',
+      target: 'all',
+      type: 'notice',
+      icon: 'ri-calendar-event-fill',
+      actionView: 'live-scoreboard',
+      senderRole: 'coach',
+      senderName: 'Coach Rajan',
+      read: false,
+      readByPlayers: []
+    });
+
+    showToast('Pudhiya match vetrikalamaaga schedule seiyyappattathu!', 'ri-calendar-check-line');
+  }
+
+  saveAppData(appData);
+  closeModal('modalScheduleMatch');
+  updateLiveScoreboardDOM();
+}
+
+function deleteScheduledMatch(matchId) {
+  if (!confirm('Are you sure you want to remove this match from schedule?')) return;
+  appData.scheduledMatches = (appData.scheduledMatches || []).filter(m => m.id !== matchId);
+  saveAppData(appData);
+  showToast('Match removed from schedule', 'ri-delete-bin-line');
+  updateLiveScoreboardDOM();
+}
+
+// ----------------------------------------------------
+// WINNER DECLARATION & CONFETTI CELEBRATION
+// ----------------------------------------------------
+let confettiAnimationId = null;
+
+function startConfettiAnimation() {
+  const canvas = document.getElementById('winnerConfettiCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.parentElement ? canvas.parentElement.offsetWidth : 520;
+  canvas.height = canvas.parentElement ? canvas.parentElement.offsetHeight : 460;
+
+  const colors = ['#ff5500', '#00f2fe', '#ffd700', '#10b981', '#ec4899', '#ffffff'];
+  const pieces = [];
+  for (let i = 0; i < 70; i++) {
+    pieces.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height - canvas.height,
+      size: Math.random() * 8 + 4,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      speedY: Math.random() * 3 + 2,
+      speedX: Math.random() * 2 - 1,
+      rotation: Math.random() * 360,
+      rotSpeed: Math.random() * 6 - 3
+    });
+  }
+
+  cancelAnimationFrame(confettiAnimationId);
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    pieces.forEach(p => {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate((p.rotation * Math.PI) / 180);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+      ctx.restore();
+
+      p.y += p.speedY;
+      p.x += p.speedX;
+      p.rotation += p.rotSpeed;
+
+      if (p.y > canvas.height) {
+        p.y = -10;
+        p.x = Math.random() * canvas.width;
+      }
+    });
+    confettiAnimationId = requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function stopConfettiAnimation() {
+  if (confettiAnimationId) {
+    cancelAnimationFrame(confettiAnimationId);
+    confettiAnimationId = null;
+  }
+}
+
+function declareTeamWinner(teamKey) {
+  if (!checkCoachScoreboardPermission()) return;
+  const lm = ensureLiveMatchData();
+  const tA = lm.teamA;
+  const tB = lm.teamB;
+  const isTeamA = teamKey === 'teamA';
+  const winningTeam = isTeamA ? tA : tB;
+  const losingTeam = isTeamA ? tB : tA;
+
+  if (!confirm(`🏆 Declare ${winningTeam.name} as the OFFICIAL WINNER of this match?\n\nScore: ${tA.name} ${tA.score} - ${tB.score} ${tB.name}`)) {
+    return;
+  }
+
+  // Pause clocks
+  pauseRaidTimer();
+  pauseMatchClock();
+
+  // Determine margin & result string
+  const scoreDiff = Math.abs(tA.score - tB.score);
+  let resultStr = '';
+  if (scoreDiff === 0) {
+    resultStr = `Match Tied (${tA.score} - ${tB.score}) — ${winningTeam.name} Declared Winner by Coach! 🏆`;
+  } else {
+    resultStr = `${winningTeam.name} Won by ${scoreDiff} Points! 🏆`;
+  }
+
+  // Find active scheduled match
+  const scheduledMatches = appData.scheduledMatches || [];
+  let currentSched = scheduledMatches.find(m => m.id === lm.activeScheduledMatchId);
+  if (!currentSched && scheduledMatches.length > 0) {
+    currentSched = scheduledMatches[0];
+    lm.activeScheduledMatchId = currentSched.id;
+  }
+
+  if (currentSched) {
+    currentSched.status = 'Completed';
+    currentSched.winner = teamKey;
+    currentSched.scoreA = tA.score;
+    currentSched.scoreB = tB.score;
+    currentSched.result = resultStr;
+  }
+
+  // Add or update savedMatches
+  const newSaved = {
+    id: Date.now(),
+    scheduledMatchId: lm.activeScheduledMatchId || null,
+    date: currentSched ? currentSched.date : new Date().toISOString().split('T')[0],
+    tournament: currentSched ? currentSched.tournament : 'Kabaddi League Match',
+    venue: currentSched ? currentSched.venue : 'Home Arena Stadium',
+    teamA: tA.name,
+    teamB: tB.name,
+    scoreA: tA.score,
+    scoreB: tB.score,
+    result: resultStr,
+    winner: teamKey,
+    bestRaider: `${appData.players && appData.players[0] ? appData.players[0].name : 'Raider'} - ${tA.raidPoints} Pts`,
+    bestDefender: `${appData.players && appData.players[1] ? appData.players[1].name : 'Defender'} - ${tA.tacklePoints} Pts`
+  };
+
+  if (!appData.savedMatches) appData.savedMatches = [];
+  appData.savedMatches = appData.savedMatches.filter(m => m.scheduledMatchId !== lm.activeScheduledMatchId);
+  appData.savedMatches.unshift(newSaved);
+
+  // Add match action log
+  addMatchEventLog(`🏆 OFFICIAL WINNER DECLARED: ${winningTeam.name} (${resultStr})`, 'super');
+
+  // Push squad notification
+  if (!appData.notifications) appData.notifications = [];
+  appData.notifications.unshift({
+    id: Date.now(),
+    title: `🏆 ${winningTeam.name} WINNER! (${tA.score} - ${tB.score})`,
+    desc: `Official match concluded! Result: ${resultStr}`,
+    time: 'Just now',
+    target: 'all',
+    type: 'notice',
+    icon: 'ri-trophy-fill',
+    actionView: 'live-scoreboard',
+    senderRole: 'coach',
+    senderName: 'Coach Rajan',
+    read: false,
+    readByPlayers: []
+  });
+
+  saveAppData(appData);
+
+  // Play fanfare victory sound!
+  playMatchSound('fanfare');
+
+  // Populate Winner Celebration Modal
+  const modalEl = document.getElementById('modalDeclareWinner');
+  const teamTitleEl = document.getElementById('winnerDeclaredTeamName');
+  const cardNameA = document.getElementById('winnerCardNameA');
+  const cardNameB = document.getElementById('winnerCardNameB');
+  const cardScoreA = document.getElementById('winnerCardScoreA');
+  const cardScoreB = document.getElementById('winnerCardScoreB');
+  const marginTag = document.getElementById('winnerMarginTag');
+
+  if (teamTitleEl) teamTitleEl.textContent = winningTeam.name;
+  if (cardNameA) cardNameA.textContent = tA.name;
+  if (cardNameB) cardNameB.textContent = tB.name;
+  if (cardScoreA) cardScoreA.textContent = tA.score;
+  if (cardScoreB) cardScoreB.textContent = tB.score;
+  if (marginTag) marginTag.innerHTML = `🎉 ${resultStr}`;
+
+  // Highlight winning card in modal
+  const boxA = document.getElementById('winnerBoxTeamA');
+  const boxB = document.getElementById('winnerBoxTeamB');
+  if (boxA && boxB) {
+    if (isTeamA) {
+      boxA.classList.add('winner-box-active');
+      boxB.classList.remove('winner-box-active');
+    } else {
+      boxB.classList.add('winner-box-active');
+      boxA.classList.remove('winner-box-active');
+    }
+  }
+
+  // Show modal & start confetti
+  if (modalEl) {
+    modalEl.classList.add('active');
+    setTimeout(() => startConfettiAnimation(), 60);
+  }
+
+  // Refresh scoreboard DOM
+  updateLiveScoreboardDOM();
+}
+
+function closeWinnerModalAndReturnSchedule() {
+  stopConfettiAnimation();
+  closeModal('modalDeclareWinner');
+  switchScoreboardTab('schedule');
+}
+
+function openPosterLightbox(imgUrl, title = 'Match Notice Poster') {
+  const modalBody = document.getElementById('previewModalBody');
+  const modalTitle = document.getElementById('previewFileTitle');
+  const typeIcon = document.getElementById('previewTypeIcon');
+  const metaEl = document.getElementById('previewMetaDetails');
+  const downloadBtn = document.getElementById('previewDownloadBtn');
+
+  if (modalTitle) modalTitle.textContent = title;
+  if (typeIcon) {
+    typeIcon.textContent = 'NOTICE POSTER';
+    typeIcon.className = 'badge-priority high';
+  }
+  if (metaEl) {
+    metaEl.innerHTML = `<span><i class="ri-image-line"></i> Official Tournament Notice Poster</span>`;
+  }
+  if (downloadBtn) {
+    downloadBtn.onclick = () => {
+      const a = document.createElement('a');
+      a.href = imgUrl;
+      a.download = 'Match_Notice_Poster.jpg';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    };
+  }
+  if (modalBody) {
+    modalBody.innerHTML = `
+      <div style="text-align:center; padding: 12px; background:rgba(0,0,0,0.6); border-radius:16px;">
+        <img src="${imgUrl}" alt="${title}" style="max-width:100%; max-height:68vh; object-fit:contain; border-radius:12px; box-shadow:0 0 35px rgba(255,85,0,0.35); border:1px solid rgba(255,255,255,0.15);">
+      </div>
+    `;
+  }
+  openModal('modalFilePreview');
+}
+
+// ----------------------------------------------------
+// KEYBOARD SHORTCUTS FOR SCOREKEEPER (COACH ONLY)
+// ----------------------------------------------------
+document.addEventListener('keydown', (e) => {
+  if (currentView !== 'live-scoreboard') return;
+  if (appData.activeRole !== 'coach') return;
+  const tag = e.target.tagName.toLowerCase();
+  if (tag === 'input' || tag === 'textarea') return;
+
+  if (e.code === 'Space') {
+    e.preventDefault();
+    toggleRaidTimer();
+  } else if (e.key === 'r' || e.key === 'R') {
+    e.preventDefault();
+    resetRaidTimer(30);
+  } else if (e.key === 'd' || e.key === 'D') {
+    e.preventDefault();
+    toggleDoOrDie();
+  } else if (e.key === 'u' || e.key === 'U') {
+    e.preventDefault();
+    undoLastMatchAction();
+  }
+});
+
+function renderSavedMatchesTableRows() {
+  const savedMatches = appData.savedMatches || [];
+  if (savedMatches.length === 0) {
+    return `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:16px;">No previous matches recorded</td></tr>`;
+  }
+  let rows = '';
+  savedMatches.forEach(m => {
+    rows += `
+      <tr class="history-row">
+        <td><span class="match-date-badge">${m.date}</span></td>
+        <td><b>${m.teamA}</b> <span class="vs-pill">vs</span> <b>${m.teamB}</b></td>
+        <td><span class="score-pill-bold">${m.scoreA} - ${m.scoreB}</span></td>
+        <td><span class="result-badge ${m.result && m.result.includes('Won') ? 'won' : 'lost'}">${m.result || 'Finished'}</span></td>
+        <td class="desktop-only"><small style="color:var(--accent-cyan);">${m.bestRaider || 'N/A'}</small></td>
+      </tr>
+    `;
+  });
+  return rows;
+}
+
+// ----------------------------------------------------
+// MATCH SCHEDULE VIEW HTML RENDERER
+// ----------------------------------------------------
+function renderMatchScheduleViewHTML() {
+  const matches = appData.scheduledMatches || [];
+  const lm = ensureLiveMatchData();
+  const isCoach = appData.activeRole === 'coach';
+
+  let filtered = matches;
+  if (scheduleFilterTab === 'live') {
+    filtered = matches.filter(m => m.status === 'Live');
+  } else if (scheduleFilterTab === 'scheduled') {
+    filtered = matches.filter(m => m.status === 'Scheduled');
+  } else if (scheduleFilterTab === 'completed') {
+    filtered = matches.filter(m => m.status === 'Completed');
+  }
+
+  const countAll = matches.length;
+  const countLive = matches.filter(m => m.status === 'Live').length;
+  const countSched = matches.filter(m => m.status === 'Scheduled').length;
+  const countComp = matches.filter(m => m.status === 'Completed').length;
+
+  let cardsHtml = '';
+  if (filtered.length > 0) {
+    filtered.forEach(m => {
+      const isCurrentActive = lm.activeScheduledMatchId === m.id;
+      const posterImg = m.posterImage || 'assets/match_notice_poster.jpg';
+      let statusBadge = '';
+      if (m.status === 'Live') {
+        statusBadge = `<span class="fixture-status-pill live"><span class="pulse-dot"></span> LIVE (Nerlai)</span>`;
+      } else if (m.status === 'Completed') {
+        statusBadge = `<span class="fixture-status-pill completed"><i class="ri-check-double-line"></i> Mudinthavai (Completed)</span>`;
+      } else {
+        statusBadge = `<span class="fixture-status-pill scheduled"><i class="ri-calendar-line"></i> Adutha Potti (Upcoming)</span>`;
+      }
+
+      let winnerTag = '';
+      if (m.status === 'Completed') {
+        const winTeamName = m.winner === 'teamB' ? m.teamB : m.teamA;
+        winnerTag = `
+          <div class="fixture-winner-badge">
+            <i class="ri-trophy-fill" style="color:var(--accent-gold);"></i>
+            <span>Vetriyalar (Winner): <b>${winTeamName}</b> (${m.scoreA} - ${m.scoreB})</span>
+          </div>
+        `;
+      }
+
+      cardsHtml += `
+        <div class="match-fixture-card ${m.status.toLowerCase()} ${isCurrentActive ? 'active-arena-border' : ''}" onclick="openScheduledMatch('${m.id}')">
+          
+          <!-- NOTICE IMAGE POSTER (FRONT BANNER) -->
+          <div class="fixture-poster-banner-wrap" onclick="event.stopPropagation(); openPosterLightbox('${posterImg}', '${m.tournament} - Notice Poster')">
+            <img src="${posterImg}" alt="${m.tournament} Notice Poster" class="fixture-poster-banner-img">
+            <div class="fixture-poster-overlay">
+              <span class="poster-notice-chip"><i class="ri-megaphone-fill"></i> Oor Match Notice Poster</span>
+              <button type="button" class="btn-poster-view-chip" title="Notice poster mulumaiya paaru">
+                <i class="ri-zoom-in-line"></i> View Poster
+              </button>
+            </div>
+          </div>
+
+          <div class="fixture-card-header">
+            <div class="fixture-meta-left">
+              <span class="tournament-tag">${m.tournament || 'Local Kabaddi Potti'}</span>
+              <span class="round-tag">${m.round || 'Round 1'}</span>
+            </div>
+            ${statusBadge}
+          </div>
+
+          <!-- LOCAL TOURNAMENT SPECS STRIP (PRIZES, WEIGHT, SURFACE) -->
+          <div class="local-specs-strip">
+            <span class="local-spec-badge gold" title="Mudhal Parisu"><i class="ri-medal-fill"></i> ${m.firstPrize || 'Rs.25,000 + Suzhar Koppai 🏆'}</span>
+            <span class="local-spec-badge cyan" title="Weight Category (48kg to Open)"><i class="ri-scales-3-line"></i> ${m.weightCategory || '65 Kg Weight'}</span>
+            <span class="local-spec-badge soil" title="Aadukalam Surface"><i class="ri-landscape-line"></i> ${m.groundType || 'Semmann Kalam'}</span>
+            ${m.entryFee ? `<span class="local-spec-badge fee" title="Entry Fee"><i class="ri-coupon-3-line"></i> ${m.entryFee}</span>` : ''}
+          </div>
+
+          <!-- Teams Versus Graphic Area -->
+          <div class="fixture-teams-row">
+            <div class="fixture-team-col team-a">
+              <div class="fixture-team-icon orange-glow">
+                <i class="ri-shield-star-fill"></i>
+              </div>
+              <div class="fixture-team-name">${m.teamA}</div>
+              ${m.status !== 'Scheduled' ? `<div class="fixture-team-score orange-pts">${m.scoreA || 0}</div>` : ''}
+            </div>
+
+            <div class="fixture-vs-divider">
+              <span class="vs-circle">VS</span>
+              <span class="vs-match-no">#${m.matchNumber || 1}</span>
+            </div>
+
+            <div class="fixture-team-col team-b">
+              <div class="fixture-team-icon cyan-glow">
+                <i class="ri-shield-user-fill"></i>
+              </div>
+              <div class="fixture-team-name">${m.teamB}</div>
+              ${m.status !== 'Scheduled' ? `<div class="fixture-team-score cyan-pts">${m.scoreB || 0}</div>` : ''}
+            </div>
+          </div>
+
+          ${winnerTag}
+
+          <!-- Date, Time & Venue Bar -->
+          <div class="fixture-info-bar">
+            <span><i class="ri-calendar-event-line"></i> ${m.date}</span>
+            <span><i class="ri-time-line"></i> ${m.time}</span>
+            <span><i class="ri-map-pin-line"></i> ${m.venue}</span>
+          </div>
+
+          <!-- Local Referee Rule Strip -->
+          <div class="local-referee-rule-strip">
+            <i class="ri-scales-3-line"></i>
+            <span>${m.refereeRule || 'Naduvar theerpe iruthiyanathu! Koopidum podhu udane kalam iranga vendum.'}</span>
+          </div>
+
+          ${m.notes ? `<div class="fixture-notes-row"><i class="ri-information-line"></i> ${m.notes}</div>` : ''}
+
+          <!-- Action Footer -->
+          <div class="fixture-actions-row">
+            <button class="btn-fixture-launch" onclick="event.stopPropagation(); openScheduledMatch('${m.id}')">
+              <i class="${m.status === 'Completed' ? 'ri-bar-chart-box-line' : 'ri-broadcast-fill'}"></i>
+              <span>${m.status === 'Completed' ? '📊 Scoreboard Paaru (View)' : (m.status === 'Live' ? '⚡ Live Scoreboard Thodaru' : '⚡ Live Scoreboard Arambi')}</span>
+            </button>
+            ${isCoach ? `
+              <div class="fixture-admin-btns" onclick="event.stopPropagation()">
+                <button class="btn-icon-fixture" onclick="openScheduleMatchModal('${m.id}')" title="Edit Match Schedule"><i class="ri-edit-line"></i></button>
+                <button class="btn-icon-fixture danger" onclick="deleteScheduledMatch('${m.id}')" title="Delete Match"><i class="ri-delete-bin-line"></i></button>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    });
+  } else {
+    cardsHtml = `
+      <div class="no-matches-state card-glass" style="grid-column: 1 / -1; text-align:center; padding: 40px 20px;">
+        <div class="icon-3d orange" style="margin:0 auto 16px; width:64px; height:64px; font-size:2rem;"><i class="ri-calendar-todo-line"></i></div>
+        <h3 style="margin-bottom:8px;">Intha Pirivil Pottigal Yedhum Illai (No Matches)</h3>
+        <p style="color:#94a3b8; font-size:0.88rem; margin:0 0 20px;">"+ Pudhiya Match Schedule" buttonai use panni oor thiruvizha pottiyai serkkavum.</p>
+        ${isCoach ? `<button class="btn btn-orange" onclick="openScheduleMatchModal()"><i class="ri-add-line"></i> + Pudhiya Match Serkkavum (New Match)</button>` : ''}
+      </div>
+    `;
+  }
+
+  return `
+    <div class="match-schedule-container animate-fade-in">
+      <!-- SCHEDULE TOPBAR -->
+      <div class="schedule-header-card card-glass">
+        <div class="schedule-title-block">
+          <div class="live-pulse-badge"><span class="pulse-dot"></span> Local & Gramiya Kabaddi Attavanai</div>
+          <h2 class="text-gradient-orange" style="margin: 8px 0 4px; font-size: 1.6rem; font-weight: 900;">
+            🌾 Oor Thiruvizha Kabaddi Pottigal (Local Kabaddi Fixtures)
+          </h2>
+        </div>
+
+        <div class="schedule-top-actions">
+          ${isCoach ? `
+            <button class="btn btn-orange" onclick="openScheduleMatchModal()">
+              <i class="ri-calendar-check-fill"></i> + Pudhiya Match Schedule (New Match)
+            </button>
+          ` : ''}
+          <button class="btn btn-primary" onclick="switchScoreboardTab('arena')" style="background:var(--grad-cyan); color:#000;">
+            <i class="ri-broadcast-line"></i> ⚡ Live Arena Thira (Live Scoreboard)
+          </button>
+        </div>
+      </div>
+
+      <!-- FILTER TABS ROW -->
+      <div class="schedule-filter-bar">
+        <div class="filter-chips-wrap">
+          <button class="filter-chip-btn ${scheduleFilterTab === 'all' ? 'active' : ''}" onclick="setScheduleFilter('all')">
+            <span>🔥 Ellaa Pottigalum (All Matches)</span>
+            <span class="count-pill">${countAll}</span>
+          </button>
+          <button class="filter-chip-btn ${scheduleFilterTab === 'live' ? 'active' : ''}" onclick="setScheduleFilter('live')">
+            <span>🔴 Live Aattam (Live Now)</span>
+            <span class="count-pill live">${countLive}</span>
+          </button>
+          <button class="filter-chip-btn ${scheduleFilterTab === 'scheduled' ? 'active' : ''}" onclick="setScheduleFilter('scheduled')">
+            <span>🕒 Adutha Pottigal (Upcoming)</span>
+            <span class="count-pill">${countSched}</span>
+          </button>
+          <button class="filter-chip-btn ${scheduleFilterTab === 'completed' ? 'active' : ''}" onclick="setScheduleFilter('completed')">
+            <span>🏆 Mudinthavai (Completed)</span>
+            <span class="count-pill">${countComp}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- MATCHES GRID -->
+      <div class="match-fixtures-grid">
+        ${cardsHtml}
+      </div>
+
+      <!-- RECENT SAVED MATCHES QUICK ARCHIVE -->
+      <div class="card-glass" style="margin-top: 24px; padding: 20px;">
+        <div class="section-card-header" style="margin-bottom: 14px;">
+          <div class="card-title-wrap">
+            <i class="ri-history-line text-gradient-cyan"></i>
+            <span>Kadantha Kaala Kabaddi Vetrigal & Koppaigal (Past Matches Archive)</span>
+          </div>
+          <span style="font-size:0.80rem; color:#94a3b8;">${(appData.savedMatches || []).length} Pottigal Pathivu</span>
+        </div>
+        <div class="history-table-wrap">
+          <table class="scoreboard-history-table">
+            <thead>
+              <tr>
+                <th>Thethi (Date)</th>
+                <th>Potti & Aadukalam (Match)</th>
+                <th>Score</th>
+                <th>Mudivu (Result)</th>
+                <th class="desktop-only">Sirandha Aattakkaaran (Best Player)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${renderSavedMatchesTableRows()}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ----------------------------------------------------
+// LIVE SCOREBOARD HTML RENDERER
+// ----------------------------------------------------
+function renderLiveScoreboardHTML() {
+  if (scoreboardTab === 'schedule') {
+    return renderMatchScheduleViewHTML();
+  }
+
+  const lm = ensureLiveMatchData();
+  const tA = lm.teamA;
+  const tB = lm.teamB;
+  const isCoach = appData.activeRole === 'coach';
+
+  // Find active scheduled match info
+  const scheduledMatches = appData.scheduledMatches || [];
+  let activeSched = scheduledMatches.find(m => m.id === lm.activeScheduledMatchId);
+  if (!activeSched && scheduledMatches.length > 0) {
+    activeSched = scheduledMatches[0];
+    lm.activeScheduledMatchId = activeSched.id;
+  }
+  const activePoster = activeSched ? (activeSched.posterImage || 'assets/match_notice_poster.jpg') : 'assets/match_notice_poster.jpg';
+
+  // Active Players Court Dots (7 circles)
+  const renderCourtDots = (count, max = 7, colorClass = 'orange') => {
+    let dots = '';
+    for (let i = 1; i <= max; i++) {
+      const active = i <= count;
+      dots += `<span class="court-dot ${active ? colorClass : 'bench'}" title="${active ? 'Kalam Irangiyavar (On Mat)' : 'Out Aana Veerargal (Out)'}"></span>`;
+    }
+    return dots;
+  };
+
+  // Action Log items
+  let logHtml = '';
+  (lm.actionLog || []).slice(0, 15).forEach(item => {
+    let badgeClass = 'normal';
+    if (item.type === 'super') badgeClass = 'super-badge';
+    else if (item.type === 'bonus') badgeClass = 'bonus-badge';
+    else if (item.type === 'doodie') badgeClass = 'doodie-badge';
+    else if (item.type === 'warning') badgeClass = 'warning-badge';
+
+    logHtml += `
+      <div class="match-log-entry ${badgeClass}">
+        <span class="log-time">${item.time}</span>
+        <span class="log-text">${item.text}</span>
+      </div>
+    `;
+  });
+
+  return `
+    <div class="scoreboard-container animate-fade-in ${lm.isDoOrDie ? 'do-or-die-active' : ''}">
+
+      <!-- ARENA TOP BAR: BREADCRUMB & ACTIVE LOCAL MATCH INFO -->
+      <div class="arena-match-header-bar card-glass">
+        <!-- TOP NAV ROW: Back Navigation & Action Controls -->
+        <div class="arena-header-nav-row">
+          <button class="btn btn-sm btn-outline arena-back-btn" onclick="switchScoreboardTab('schedule')">
+            <i class="ri-arrow-left-line"></i> Match Schedule
+          </button>
+
+          <div class="arena-header-actions">
+            ${isCoach ? `
+              <!-- Referee Sound Triggers (Coach Only) -->
+              <button class="btn btn-sm btn-local-whistle" onclick="blastRefereeWhistle()" title="Naduvar Whistle Olika">
+                <i class="ri-volume-up-fill"></i> Whistle
+              </button>
+              <button class="btn btn-sm btn-local-bell" onclick="announceLast5Minutes()" title="Kadaisi 5 Nimidam Warning Bell">
+                <i class="ri-timer-line"></i> 5 Mins
+              </button>
+            ` : ''}
+            ${activeSched && activeSched.status === 'Completed' ? `
+              <span class="result-badge won" style="font-size:0.82rem; padding:4px 10px;">
+                🏆 Winner: ${activeSched.winner === 'teamB' ? tB.name : tA.name}
+              </span>
+            ` : ''}
+            ${isCoach ? `
+              <button class="btn btn-sm btn-primary" onclick="openScheduleMatchModal()" title="Schedule Another Match" style="white-space:nowrap;">
+                <i class="ri-calendar-check-line"></i> + New Match
+              </button>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- MATCH TITLE & TOURNAMENT INFO ROW -->
+        <div class="arena-header-match-info-row">
+          <div class="arena-match-title-block">
+            <div class="arena-tournament-pill">
+              <span class="pulse-dot"></span>
+              <span class="tourney-name">🌾 ${activeSched ? activeSched.tournament : 'Oor Kabaddi Potti'}</span>
+            </div>
+            <div class="arena-teams-versus">
+              <span class="round-tag">${activeSched && activeSched.round ? activeSched.round : 'Potti'}</span>
+              <span class="team-tag team-a-tag"><i class="ri-shield-star-fill"></i> ${tA.name}</span>
+              <span class="vs-text">VS</span>
+              <span class="team-tag team-b-tag"><i class="ri-shield-user-fill"></i> ${tB.name}</span>
+            </div>
+          </div>
+
+          <!-- Badges & Poster -->
+          <div class="arena-header-badges-wrap">
+            <div class="arena-match-poster-chip" onclick="openPosterLightbox('${activePoster}', '${activeSched ? activeSched.tournament : 'Match Notice'}')" title="Match Notice Poster Paaru">
+              <img src="${activePoster}" class="arena-poster-thumb-mini" alt="Notice Poster">
+              <span><i class="ri-image-line"></i> Notice Poster</span>
+            </div>
+            <div class="arena-local-spec-strip">
+              <span class="local-spec-badge soil"><i class="ri-landscape-line"></i> ${activeSched && activeSched.groundType ? activeSched.groundType : 'Semmann Kalam'}</span>
+              <span class="local-spec-badge gold"><i class="ri-medal-fill"></i> ${activeSched && activeSched.firstPrize ? activeSched.firstPrize : 'Rs.25,000 + Koppai 🏆'}</span>
+              <span class="local-spec-badge cyan"><i class="ri-scales-3-line"></i> ${activeSched && activeSched.weightCategory ? activeSched.weightCategory : '65 Kg Weight'}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMPLETED MATCH CELEBRATORY BANNER (IF ALREADY FINISHED) -->
+      ${activeSched && activeSched.status === 'Completed' ? `
+        <div class="arena-winner-banner animate-fade-in">
+          <i class="ri-trophy-fill" style="color:var(--accent-gold); font-size:1.8rem;"></i>
+          <div>
+            <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:1px; color:#fbbf24; font-weight:800;">
+              👑 OFFICIAL MATCH RESULT
+            </div>
+            <div style="font-size:1.2rem; font-weight:900; color:#fff;">
+              Winner: <span class="text-gradient-orange">${activeSched.winner === 'teamB' ? tB.name : tA.name}</span> — ${activeSched.result || 'Champion!'}
+            </div>
+          </div>
+          <button class="btn btn-sm btn-outline" style="margin-left:auto;" onclick="switchScoreboardTab('schedule')">
+            Back to Schedule →
+          </button>
+        </div>
+      ` : ''}
+
+      <!-- TOP STATUS & MATCH CLOCK BAR -->
+      <div class="scoreboard-topbar">
+        <div class="topbar-left">
+          <span class="live-pulse-badge"><span class="pulse-dot"></span> LIVE</span>
+          
+          <!-- Segment Selector -->
+          <div class="segment-picker">
+            ${isCoach ? `
+              <select class="half-select" onchange="setMatchHalf(this.value)">
+                <option value="1st Half" ${lm.currentHalf === '1st Half' ? 'selected' : ''}>1st Half</option>
+                <option value="Halftime" ${lm.currentHalf === 'Halftime' ? 'selected' : ''}>Halftime</option>
+                <option value="2nd Half" ${lm.currentHalf === '2nd Half' ? 'selected' : ''}>2nd Half</option>
+                <option value="Extra Time" ${lm.currentHalf === 'Extra Time' ? 'selected' : ''}>Extra Time</option>
+              </select>
+            ` : `
+              <span class="half-viewer-badge"><i class="ri-flag-line"></i> ${lm.currentHalf || '1st Half'}</span>
+            `}
+          </div>
+        </div>
+
+        <!-- 20-Min Match Clock -->
+        <div class="topbar-clock-wrap">
+          <div class="clock-label"><i class="ri-timer-line"></i> MATCH CLOCK</div>
+          <div class="clock-display" id="matchClockDisplay">${formatClockTime(lm.matchTimeRemaining)}</div>
+          ${isCoach ? `
+            <button class="clock-control-btn" id="matchClockToggleBtn" onclick="toggleMatchClock()" title="Start / Pause Clock">
+              <i class="${lm.isMatchClockRunning ? 'ri-pause-circle-fill' : 'ri-play-circle-fill'}"></i>
+            </button>
+            <button class="clock-control-btn" onclick="resetMatchClock()" title="Reset 20 Mins">
+              <i class="ri-refresh-line"></i>
+            </button>
+          ` : ''}
+        </div>
+
+        <div class="topbar-actions">
+          <button class="topbar-tool-btn" onclick="toggleSoundEffects()" title="Toggle Sound">
+            <i class="${soundEffectsEnabled ? 'ri-volume-up-fill' : 'ri-volume-mute-fill'}"></i>
+            <span>${soundEffectsEnabled ? 'Sound ON' : 'Muted'}</span>
+          </button>
+          <button class="topbar-tool-btn whatsapp-btn" onclick="shareMatchToWhatsApp()" title="WhatsAppil Pagir" style="background:#25D366; color:#000; font-weight:700;">
+            <i class="ri-whatsapp-fill"></i>
+            <span>WhatsApp</span>
+          </button>
+          ${isCoach ? `
+            <button class="topbar-tool-btn undo-btn" onclick="undoLastMatchAction()" title="Undo Last Point (Key: U)">
+              <i class="ri-arrow-go-back-line"></i>
+              <span>Undo</span>
+            </button>
+          ` : ''}
+        </div>
+      </div>
+
+      <!-- MAIN 3-COLUMN ARENA SCOREBOARD -->
+      <div class="scoreboard-main-grid">
+        
+        <!-- TEAM A: THAAI TAMIZHANS -->
+        <div class="team-score-card team-thaai ${lm.activeRaidingTeam === 'teamA' ? 'raiding-active' : ''}">
+          <div class="team-header">
+            <img src="assets/kabaddi_logo.jpg" alt="Thaai Tamizhans Logo" class="team-logo-badge">
+            <div>
+              <div class="team-name text-gradient-orange">${tA.name}</div>
+            </div>
+            ${lm.activeRaidingTeam === 'teamA' ? '<span class="raiding-tag">Raid Selgirathu 🔥</span>' : ''}
+          </div>
+
+          <div class="score-display-huge text-gradient-orange">${tA.score}</div>
+
+          <!-- Court 7-man visual tracker -->
+          <div class="court-status-wrap">
+            <div class="court-label">
+              <span>Kalam Irangiya Veerargal (On Mat):</span>
+              <b style="color:var(--accent-orange); font-size:1.1rem;">${tA.playersOnCourt} / 7</b>
+            </div>
+            <div class="court-dots-row">
+              ${renderCourtDots(tA.playersOnCourt, 7, 'orange')}
+            </div>
+          </div>
+
+          <!-- Points Breakdown -->
+          <div class="points-breakdown-grid">
+            <div class="stat-pill"><span class="lbl">Raid Pulli</span><span class="val">${tA.raidPoints}</span></div>
+            <div class="stat-pill"><span class="lbl">Pidi / Tackle</span><span class="val">${tA.tacklePoints}</span></div>
+            <div class="stat-pill"><span class="lbl">Bonus Pulli</span><span class="val">${tA.bonusPoints}</span></div>
+            <div class="stat-pill"><span class="lbl">Lona (+2)</span><span class="val">${tA.allOutPoints}</span></div>
+          </div>
+
+          <!-- TEAM A WIN BUTTON (DECLARE WINNER - COACH ONLY) -->
+          ${isCoach ? `
+            <div class="team-winner-action-bar">
+              <button class="btn-declare-winner btn-declare-winner-a ${activeSched && activeSched.winner === 'teamA' ? 'winner-active' : ''}" onclick="declareTeamWinner('teamA')" title="Declare ${tA.name} as Winner">
+                <i class="ri-trophy-fill"></i>
+                <span>Win</span>
+              </button>
+            </div>
+          ` : ''}
+
+          <!-- Action Buttons (Coach Mode) vs Spectator Lock (Player Mode) -->
+          ${isCoach ? `
+            <div class="point-actions-group">
+              <div class="group-title">⚡ RAID PULLIGAL (RAID POINTS)</div>
+              <div class="btn-row">
+                <button class="pt-btn orange" onclick="scoreRaidPoint('teamA', 1, false)">
+                  <span class="pt-num">+1</span>
+                  <span class="pt-label">Thodu Pulli</span>
+                </button>
+                <button class="pt-btn orange" onclick="scoreRaidPoint('teamA', 2, false)">
+                  <span class="pt-num">+2</span>
+                  <span class="pt-label">2 Pulligal</span>
+                </button>
+                <button class="pt-btn super-glow" onclick="scoreRaidPoint('teamA', 3, false)">
+                  <span class="pt-num">⚡ +3</span>
+                  <span class="pt-label">Super Raid</span>
+                </button>
+                <button class="pt-btn gold" onclick="scoreRaidPoint('teamA', 1, true)">
+                  <span class="pt-num">⭐ +1</span>
+                  <span class="pt-label">Bonus Pulli</span>
+                </button>
+              </div>
+
+              <div class="group-title" style="margin-top:12px;">🛡️ PIDI / DEFENCE PULLIGAL (TACKLE POINTS)</div>
+              <div class="btn-row">
+                <button class="pt-btn cyan" onclick="scoreTacklePoint('teamA', false)">
+                  <span class="pt-num">🛡️ +1</span>
+                  <span class="pt-label">Tackle Pulli</span>
+                </button>
+                <button class="pt-btn super-cyan" onclick="scoreTacklePoint('teamA', true)">
+                  <span class="pt-num">💥 +2</span>
+                  <span class="pt-label">Super Tackle</span>
+                </button>
+                <button class="pt-btn purple" onclick="scoreAllOut('teamA')">
+                  <span class="pt-num">👑 +2</span>
+                  <span class="pt-label">Lona (All-Out)</span>
+                </button>
+                <button class="pt-btn outline" onclick="addTechnicalPoint('teamA')">
+                  <span class="pt-num">⚖️ +1</span>
+                  <span class="pt-label">Naduvar Pulli</span>
+                </button>
+              </div>
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- CENTER CONSOLE: 30-SEC RAID TIMER -->
+        <div class="center-timer-card">
+          <div class="timer-card-title">
+            <i class="ri-timer-flash-fill text-gradient-orange"></i>
+            <span>30s RAID TIMER</span>
+          </div>
+
+          <!-- Raiding Team Switcher Pills -->
+          <div class="raiding-team-toggle">
+            ${isCoach ? `
+              <button class="raid-team-chip ${lm.activeRaidingTeam === 'teamA' ? 'active-a' : ''}" onclick="setRaidingTeam('teamA')">
+                🔴 ${tA.name} Raid
+              </button>
+              <button class="raid-team-chip ${lm.activeRaidingTeam === 'teamB' ? 'active-b' : ''}" onclick="setRaidingTeam('teamB')">
+                🔵 ${tB.name} Raid
+              </button>
+            ` : `
+              <div class="raid-team-chip-view ${lm.activeRaidingTeam === 'teamA' ? 'active-a' : 'active-b'}">
+                <i class="ri-flashlight-fill"></i> ${lm.activeRaidingTeam === 'teamA' ? ('🔴 ' + tA.name + ' Raid Selgiraar') : ('🔵 ' + tB.name + ' Raid Selgiraar')}
+              </div>
+            `}
+          </div>
+
+          <!-- Animated Raid Dial -->
+          <div class="raid-dial-wrap">
+            <svg class="raid-svg" viewBox="0 0 120 120">
+              <circle class="raid-bg-circle" cx="60" cy="60" r="54"></circle>
+              <circle class="raid-progress-circle" id="raidTimerRing" cx="60" cy="60" r="54"></circle>
+            </svg>
+            <div class="raid-seconds-inner">
+              <div id="raidTimerSeconds" class="raid-seconds-num ${lm.raidTimeRemaining <= 5 ? 'critical-pulse' : (lm.raidTimeRemaining <= 10 ? 'warning-yellow' : 'normal')}">
+                ${lm.raidTimeRemaining}
+              </div>
+              <div class="raid-seconds-lbl">Vinaadigal (Secs)</div>
+            </div>
+          </div>
+
+          <!-- Do or Die Alert Badge -->
+          <div class="do-or-die-banner ${lm.isDoOrDie ? 'active' : ''}">
+            <i class="ri-alarm-warning-fill"></i>
+            <span>${lm.isDoOrDie ? '⚡ Do-Or-Die Raid! Pulli Kattayam!' : 'Sadharana Raid (Normal Raid)'}</span>
+          </div>
+
+          ${isCoach ? `
+            <!-- Timer Buttons (Coach Only) -->
+            <div class="raid-controls-row">
+              <button id="raidTimerToggleBtn" class="raid-btn ${lm.isRaidRunning ? 'pause' : 'start'}" onclick="toggleRaidTimer()" title="Shortcut: Spacebar">
+                <i class="${lm.isRaidRunning ? 'ri-pause-fill' : 'ri-play-fill'}"></i>
+                <span>${lm.isRaidRunning ? 'Niruthu (Pause)' : 'Raid Arambi (Start)'}</span>
+              </button>
+              <button class="raid-btn reset" onclick="resetRaidTimer(30)" title="Shortcut: R">
+                <i class="ri-restart-line"></i>
+                <span>Meettamai (Reset 30s)</span>
+              </button>
+            </div>
+
+            <!-- Quick Action Toggles (Coach Only) -->
+            <div class="raid-sub-actions">
+              <button class="sub-act-btn dod-btn ${lm.isDoOrDie ? 'active' : ''}" onclick="toggleDoOrDie()" title="Shortcut: D">
+                <i class="ri-fire-fill"></i> Do-Or-Die Maatru
+              </button>
+              <button class="sub-act-btn" onclick="recordEmptyRaid()">
+                <i class="ri-indeterminate-circle-line"></i> Vettru Raid (0 Pt)
+              </button>
+            </div>
+
+            <!-- Scorekeeper Shortcuts Guide (Coach Only) -->
+            <div class="keyboard-hints desktop-only">
+              <span>⌨️ Kurukkuvazhigal: [Space] Arambi/Niruthu | [R] 30s | [D] Do-Or-Die | [U] Undo</span>
+            </div>
+          ` : `
+            <div class="raid-viewer-indicator">
+              <div class="raid-viewer-text"><i class="ri-timer-line"></i> 30s Raid Clock Live Timing</div>
+              <div class="raid-viewer-sub">Clock & Do-Or-Die are controlled live by Coach Rajan</div>
+            </div>
+          `}
+        </div>
+
+        <!-- TEAM B: OPPONENT TEAM -->
+        <div class="team-score-card team-opponent ${lm.activeRaidingTeam === 'teamB' ? 'raiding-active' : ''}">
+          <div class="team-header">
+            <div class="team-logo-badge opp-badge"><i class="ri-shield-user-fill"></i></div>
+            <div style="flex:1;">
+              <div class="team-name" style="color:var(--accent-cyan); display:flex; align-items:center; gap:6px;">
+                <span>${tB.name}</span>
+                ${isCoach ? `
+                  <button class="edit-name-btn" onclick="editOpponentTeamName()" title="Ethirani Peyar Maatru">
+                    <i class="ri-edit-line"></i>
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+            ${lm.activeRaidingTeam === 'teamB' ? '<span class="raiding-tag opp">Raid Selgirathu ⚡</span>' : ''}
+          </div>
+
+          <div class="score-display-huge text-gradient-cyan">${tB.score}</div>
+
+          <!-- Court 7-man visual tracker -->
+          <div class="court-status-wrap">
+            <div class="court-label">
+              <span>Kalam Irangiya Veerargal (On Mat):</span>
+              <b style="color:var(--accent-cyan); font-size:1.1rem;">${tB.playersOnCourt} / 7</b>
+            </div>
+            <div class="court-dots-row">
+              ${renderCourtDots(tB.playersOnCourt, 7, 'cyan')}
+            </div>
+          </div>
+
+          <!-- Points Breakdown -->
+          <div class="points-breakdown-grid">
+            <div class="stat-pill"><span class="lbl">Raid Pulli</span><span class="val">${tB.raidPoints}</span></div>
+            <div class="stat-pill"><span class="lbl">Pidi / Tackle</span><span class="val">${tB.tacklePoints}</span></div>
+            <div class="stat-pill"><span class="lbl">Bonus Pulli</span><span class="val">${tB.bonusPoints}</span></div>
+            <div class="stat-pill"><span class="lbl">Lona (+2)</span><span class="val">${tB.allOutPoints}</span></div>
+          </div>
+
+          <!-- TEAM B WIN BUTTON (DECLARE WINNER - COACH ONLY) -->
+          ${isCoach ? `
+            <div class="team-winner-action-bar">
+              <button class="btn-declare-winner btn-declare-winner-b ${activeSched && activeSched.winner === 'teamB' ? 'winner-active' : ''}" onclick="declareTeamWinner('teamB')" title="Declare ${tB.name} as Winner">
+                <i class="ri-trophy-fill"></i>
+                <span>Win</span>
+              </button>
+            </div>
+          ` : ''}
+
+          <!-- Action Buttons for Opponent (Coach Mode) vs Spectator Lock (Player Mode) -->
+          ${isCoach ? `
+            <div class="point-actions-group">
+              <div class="group-title">⚡ RAID PULLIGAL (ETHIRANI)</div>
+              <div class="btn-row">
+                <button class="pt-btn cyan" onclick="scoreRaidPoint('teamB', 1, false)">
+                  <span class="pt-num">+1</span>
+                  <span class="pt-label">Thodu Pulli</span>
+                </button>
+                <button class="pt-btn cyan" onclick="scoreRaidPoint('teamB', 2, false)">
+                  <span class="pt-num">+2</span>
+                  <span class="pt-label">2 Pulligal</span>
+                </button>
+                <button class="pt-btn super-cyan" onclick="scoreRaidPoint('teamB', 3, false)">
+                  <span class="pt-num">⚡ +3</span>
+                  <span class="pt-label">Super Raid</span>
+                </button>
+                <button class="pt-btn gold" onclick="scoreRaidPoint('teamB', 1, true)">
+                  <span class="pt-num">⭐ +1</span>
+                  <span class="pt-label">Bonus Pulli</span>
+                </button>
+              </div>
+
+              <div class="group-title" style="margin-top:12px;">🛡️ PIDI / DEFENCE PULLIGAL (ETHIRANI)</div>
+              <div class="btn-row">
+                <button class="pt-btn orange" onclick="scoreTacklePoint('teamB', false)">
+                  <span class="pt-num">🛡️ +1</span>
+                  <span class="pt-label">Tackle Pulli</span>
+                </button>
+                <button class="pt-btn super-glow" onclick="scoreTacklePoint('teamB', true)">
+                  <span class="pt-num">💥 +2</span>
+                  <span class="pt-label">Super Tackle</span>
+                </button>
+                <button class="pt-btn purple" onclick="scoreAllOut('teamB')">
+                  <span class="pt-num">👑 +2</span>
+                  <span class="pt-label">Lona (All-Out)</span>
+                </button>
+                <button class="pt-btn outline" onclick="addTechnicalPoint('teamB')">
+                  <span class="pt-num">⚖️ +1</span>
+                  <span class="pt-label">Naduvar Pulli</span>
+                </button>
+              </div>
+            </div>
+          ` : ''}
+        </div>
+
+      </div>
+
+      <!-- LOWER SECTION: LIVE COMMENTARY & MATCH ARCHIVE -->
+      <div class="scoreboard-lower-grid">
+        
+        <!-- Live Action Commentary Log -->
+        <div class="card-glass commentary-card">
+          <div class="section-card-header">
+            <div class="card-title-wrap">
+              <i class="ri-broadcast-line text-gradient-orange"></i>
+              <span>Live Match Commentary & Action Log</span>
+            </div>
+            <span class="log-count-badge">${(lm.actionLog || []).length} Events</span>
+          </div>
+
+          <div class="commentary-scroll-box" id="matchCommentaryBox">
+            ${logHtml}
+          </div>
+        </div>
+
+        <!-- Finish Match & Saved Matches Table -->
+        <div class="card-glass history-card">
+          <div class="section-card-header">
+            <div class="card-title-wrap">
+              <i class="ri-history-line text-gradient-cyan"></i>
+              <span>Saved Matches History</span>
+            </div>
+            ${isCoach ? `
+              <div style="display:flex; gap:8px;">
+                <button class="btn-sm btn-primary-gradient" onclick="finishAndSaveMatch()">
+                  <i class="ri-save-3-line"></i> Finish & Save Match
+                </button>
+                <button class="btn-sm btn-outline-danger" onclick="if(confirm('Reset match scores to 0-0?')) resetLiveMatchScores()">
+                  <i class="ri-refresh-line"></i> Reset 0-0
+                </button>
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="history-table-wrap">
+            <table class="scoreboard-history-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Match</th>
+                  <th>Score</th>
+                  <th>Result</th>
+                  <th class="desktop-only">Top Performer</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${renderSavedMatchesTableRows()}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  `;
+}
+
