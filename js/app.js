@@ -27,8 +27,21 @@ document.addEventListener('DOMContentLoaded', () => {
 // ----------------------------------------------------
 function initAuth() {
   const loginScreen = document.getElementById('loginScreen');
+  const urlParams = new URLSearchParams(window.location.search);
+  const forceLogin = urlParams.get('login') === 'true' || window.location.hash === '#login';
+
   let savedSession = localStorage.getItem('thaai_tamizhans_auth_session') || sessionStorage.getItem('thaai_tamizhans_auth_session');
   const isExplicitLogout = localStorage.getItem('thaai_tamizhans_logged_out') === 'true';
+
+  if (forceLogin) {
+    localStorage.removeItem('thaai_tamizhans_auth_session');
+    sessionStorage.removeItem('thaai_tamizhans_auth_session');
+    localStorage.setItem('thaai_tamizhans_logged_out', 'true');
+    if (loginScreen) {
+      loginScreen.classList.remove('hidden');
+    }
+    return;
+  }
 
   if (savedSession && !isExplicitLogout) {
     try {
