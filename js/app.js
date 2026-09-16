@@ -9,6 +9,8 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 let appData = getAppData();
+if (typeof window !== 'undefined') window.appData = appData;
+if (typeof globalThis !== 'undefined') globalThis.appData = appData;
 let currentView = localStorage.getItem('thaai_tamizhans_current_view') || 'coach-dashboard';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -21,29 +23,14 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ----------------------------------------------------
-// 0. AUTHENTICATION & LOGIN SCREEN SYSTEM
+// 0. AUTHENTICATION & LOGIN SCREEN SYSTEM (UNIFIED MULTI-ROLE)
 // ----------------------------------------------------
 function initAuth() {
-  populatePlayerLoginDropdown();
-  
   const loginScreen = document.getElementById('loginScreen');
-  let savedSession = localStorage.getItem('thaai_tamizhans_auth_session');
+  let savedSession = localStorage.getItem('thaai_tamizhans_auth_session') || sessionStorage.getItem('thaai_tamizhans_auth_session');
   const isExplicitLogout = localStorage.getItem('thaai_tamizhans_logged_out') === 'true';
 
-  // Seamless auto-restore default coach session if not explicitly logged out
-  if (!savedSession && !isExplicitLogout) {
-    const defaultSession = {
-      role: 'coach',
-      name: (appData.coachProfile && appData.coachProfile.name) ? appData.coachProfile.name : 'Coach Arun',
-      loginTime: Date.now()
-    };
-    try {
-      localStorage.setItem('thaai_tamizhans_auth_session', JSON.stringify(defaultSession));
-      savedSession = JSON.stringify(defaultSession);
-    } catch(e) {}
-  }
-
-  if (savedSession) {
+  if (savedSession && !isExplicitLogout) {
     try {
       const session = JSON.parse(savedSession);
       if (session && session.role) {
@@ -53,8 +40,11 @@ function initAuth() {
         if (session.role === 'player' && session.playerId) {
           appData.activePlayerId = session.playerId;
         }
+
         if (savedView) {
           currentView = savedView;
+        } else {
+          currentView = (session.role === 'coach') ? 'coach-dashboard' : 'player-dashboard';
         }
 
         if (loginScreen) {
@@ -67,161 +57,377 @@ function initAuth() {
     }
   }
 
-  // If explicit logout or invalid session, display Login Screen
+  // If no valid session or user logged out, display unified login screen
   if (loginScreen) {
     loginScreen.classList.remove('hidden');
   }
 }
 
-function populatePlayerLoginDropdown() {
-  const select = document.getElementById('playerLoginSelect');
-  if (!select) return;
+function toggleUnifiedPassword(btnEl) {
+  const passInput = document.getElementById('loginPassword');
+  if (!passInput) return;
 
-  select.innerHTML = (appData.players || []).map(p => `
-    <option value="${p.id}" ${p.id === appData.activePlayerId ? 'selected' : ''}>
-      ${p.name} (Jersey #${p.jersey} • ${p.position})
-    </option>
-  `).join('');
-}
-
-function switchLoginTab(role) {
-  const tabCoach = document.getElementById('tabLoginCoach');
-  const tabPlayer = document.getElementById('tabLoginPlayer');
-  const formCoach = document.getElementById('formCoachLogin');
-  const formPlayer = document.getElementById('formPlayerLogin');
-
-  if (role === 'coach') {
-    if (tabCoach) tabCoach.classList.add('active');
-    if (tabPlayer) tabPlayer.classList.remove('active');
-    if (formCoach) formCoach.style.display = 'block';
-    if (formPlayer) formPlayer.style.display = 'none';
-  } else {
-    if (tabPlayer) tabPlayer.classList.add('active');
-    if (tabCoach) tabCoach.classList.remove('active');
-    if (formPlayer) formPlayer.style.display = 'block';
-    if (formCoach) formCoach.style.display = 'none';
-    populatePlayerLoginDropdown();
-  }
-}
-
-function togglePasswordVisibility(inputId, btnEl) {
-  const input = document.getElementById(inputId);
-  if (!input) return;
-
-  if (input.type === 'password') {
-    input.type = 'text';
+  if (passInput.type === 'password') {
+    passInput.type = 'text';
     if (btnEl) btnEl.innerHTML = '<i class="ri-eye-off-line"></i>';
   } else {
-    input.type = 'password';
+    passInput.type = 'password';
     if (btnEl) btnEl.innerHTML = '<i class="ri-eye-line"></i>';
   }
 }
 
-function onPlayerLoginSelected(playerId) {
-  // Can be used for custom player hints or avatar previews if needed
+function fillQuickLogin(email, password) {
+  const emailInput = document.getElementById('loginUserEmail');
+  const passInput = document.getElementById('loginPassword');
+  const errorAlert = document.getElementById('loginErrorMessage');
+  const tabCoach = document.getElementById('tabRoleCoach');
+  const tabPlayer = document.getElementById('tabRolePlayer');
+  const hintText = document.getElementById('loginRoleHintText');
+
+  if (emailInput) emailInput.value = email;
+  if (passInput) passInput.value = password;
+  if (errorAlert) {
+    errorAlert.style.display = 'none';
+    errorAlert.innerHTML = '';
+  }
+
+  const isCoach = email.toLowerCase().includes('coach');
+  if (isCoach) {
+    if (tabCoach) tabCoach.classList.add('active');
+    if (tabPlayer) tabPlayer.classList.remove('active');
+    if (hintText) hintText.innerHTML = '👑 Coach account loaded ➔ Routes to <b>Coach Dashboard</b>';
+  } else {
+    if (tabPlayer) tabPlayer.classList.add('active');
+    if (tabCoach) tabCoach.classList.remove('active');
+    if (hintText) hintText.innerHTML = '🏃 Player account loaded ➔ Routes to <b>Player Dashboard</b>';
+  }
+
+  showToast(`⚡ Credentials set: ${email}`, 'ri-key-fill');
 }
 
-function handleAuthLogin(e, role) {
+function selectLoginRoleTab(role) {
+  const tabCoach = document.getElementById('tabRoleCoach');
+  const tabPlayer = document.getElementById('tabRolePlayer');
+  const emailInput = document.getElementById('loginUserEmail');
+  const passInput = document.getElementById('loginPassword');
+  const hintText = document.getElementById('loginRoleHintText');
+  const errorAlert = document.getElementById('loginErrorMessage');
+
+  if (errorAlert) {
+    errorAlert.style.display = 'none';
+    errorAlert.innerHTML = '';
+  }
+
+  if (role === 'coach') {
+    if (tabCoach) tabCoach.classList.add('active');
+    if (tabPlayer) tabPlayer.classList.remove('active');
+    const coachEmail = (appData.coachProfile && appData.coachProfile.email) ? appData.coachProfile.email : 'coach.boopathi@gmail.com';
+    const coachPass = (appData.coachProfile && appData.coachProfile.password) ? appData.coachProfile.password : 'boopathi123';
+    if (emailInput) emailInput.value = coachEmail;
+    if (passInput) passInput.value = coachPass;
+    if (hintText) hintText.innerHTML = '👑 Coach credentials loaded ➔ Routes to <b>Coach Dashboard</b>';
+    showToast('👑 Coach account selected: ' + coachEmail, 'ri-shield-user-fill');
+  } else {
+    if (tabPlayer) tabPlayer.classList.add('active');
+    if (tabCoach) tabCoach.classList.remove('active');
+    const samplePlayer = (appData.players && appData.players[0]) || { name: 'Akash' };
+    const clean = (samplePlayer.name || 'Akash').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const pEmail = `player.${clean}@gmail.com`;
+    const pPass = `${clean}123`;
+    if (emailInput) emailInput.value = pEmail;
+    if (passInput) passInput.value = pPass;
+    if (hintText) hintText.innerHTML = `🏃 Player credentials loaded (${samplePlayer.name || 'Akash'}) ➔ Routes to <b>Player Dashboard</b>`;
+    showToast(`🏃 Player account selected: ${pEmail}`, 'ri-run-fill');
+  }
+}
+
+function handleForgotPassword() {
+  openCredentialsModal();
+}
+
+function openCredentialsModal() {
+  const modal = document.getElementById('modalAllCredentials');
+  const listContainer = document.getElementById('allCredentialsList');
+  if (!modal || !listContainer) return;
+
+  const coachEmail = (appData.coachProfile && appData.coachProfile.email) ? appData.coachProfile.email : 'coach.boopathi@gmail.com';
+  const coachPass = (appData.coachProfile && appData.coachProfile.password) ? appData.coachProfile.password : 'boopathi123';
+  const coachName = (appData.coachProfile && appData.coachProfile.name) ? appData.coachProfile.name : 'Coach Boopathi';
+
+  let html = `
+    <!-- Coach Section -->
+    <div style="background:rgba(251,191,36,0.08); border:1px solid rgba(251,191,36,0.3); border-radius:12px; padding:14px; margin-bottom:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span style="font-size:1.8rem;">👑</span>
+          <div>
+            <div style="font-weight:800; color:#fbbf24; font-size:1rem;">${coachName} (Head Coach)</div>
+            <div style="font-size:0.82rem; color:#cbd5e1;">Routes to: <b style="color:#00f2fe;">Coach Dashboard</b></div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          <div style="font-size:0.84rem; background:rgba(0,0,0,0.4); padding:6px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.1);">
+            <div style="color:#94a3b8; font-size:0.75rem;">GMAIL / மின்னஞ்சல்</div>
+            <div style="color:#fff; font-weight:700;">${coachEmail}</div>
+          </div>
+          <div style="font-size:0.84rem; background:rgba(0,0,0,0.4); padding:6px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.1);">
+            <div style="color:#94a3b8; font-size:0.75rem;">PASSWORD</div>
+            <div style="color:#38ef7d; font-weight:700;">${coachPass}</div>
+          </div>
+          <button class="btn btn-sm btn-green" onclick="fillQuickLogin('${coachEmail}', '${coachPass}'); closeCredentialsModal();">
+            ⚡ Use Account
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 16 Players Header -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <h4 style="margin:0; font-size:0.95rem; font-weight:800; color:var(--accent-cyan);">
+        🏃 16 Registered Squad Players (Player Dashboard)
+      </h4>
+      <span style="font-size:0.78rem; color:#94a3b8;">Total: ${(appData.players || []).length} Players</span>
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(290px, 1fr)); gap:12px; max-height:55vh; overflow-y:auto; padding-right:4px;">
+  `;
+
+  (appData.players || []).forEach(p => {
+    const cleanName = (p.name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    const pEmail = `player.${cleanName}@gmail.com`;
+    const pPass = (p.hasCustomPassword && p.password) ? p.password : `${cleanName}123`;
+
+    html += `
+      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <img src="${p.photo}" alt="${p.name}" style="width:34px; height:34px; border-radius:50%; object-fit:cover; border:1.5px solid var(--accent-orange);">
+            <div>
+              <div style="font-weight:700; color:#fff; font-size:0.88rem;">${p.name}</div>
+              <div style="font-size:0.74rem; color:var(--accent-orange); font-weight:700;">Jersey ${p.jersey} • ${p.position}</div>
+            </div>
+          </div>
+          <button class="btn btn-sm btn-outline" style="padding:3px 8px; font-size:0.72rem; color:var(--accent-cyan); border-color:var(--accent-cyan);" onclick="fillQuickLogin('${pEmail}', '${pPass}'); closeCredentialsModal();">
+            ⚡ Fill
+          </button>
+        </div>
+        <div style="background:rgba(0,0,0,0.3); border-radius:6px; padding:6px 8px; font-size:0.78rem; display:flex; flex-direction:column; gap:3px;">
+          <div style="display:flex; justify-content:space-between;">
+            <span style="color:#94a3b8;">Gmail:</span>
+            <span style="color:#38ef7d; font-weight:600;">${pEmail}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span style="color:#94a3b8;">Pass:</span>
+            <span style="color:#cbd5e1; font-weight:600;">${pPass}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  html += `</div>`;
+  listContainer.innerHTML = html;
+  modal.classList.add('active');
+}
+
+function closeCredentialsModal() {
+  const modal = document.getElementById('modalAllCredentials');
+  if (modal) modal.classList.remove('active');
+}
+
+function showLoginError(message) {
+  const errorAlert = document.getElementById('loginErrorMessage');
+  const card = document.getElementById('unifiedLoginCard');
+
+  if (errorAlert) {
+    errorAlert.innerHTML = `<i class="ri-error-warning-fill" style="font-size:1.15rem; color:#f87171;"></i> <span>${message}</span>`;
+    errorAlert.style.display = 'flex';
+  }
+
+  if (card) {
+    card.classList.remove('shake-card');
+    void card.offsetWidth; // Trigger reflow for animation restart
+    card.classList.add('shake-card');
+  }
+}
+
+function handleUnifiedLogin(e) {
   if (e) e.preventDefault();
 
+  const emailInput = document.getElementById('loginUserEmail');
+  const passInput = document.getElementById('loginPassword');
+  const rememberCheckbox = document.getElementById('loginRememberMe');
   const loginScreen = document.getElementById('loginScreen');
 
-  if (role === 'coach') {
-    const username = document.getElementById('coachLoginUsername')?.value.trim() || 'Coach Arun';
-    const pin = document.getElementById('coachLoginPin')?.value.trim();
+  const rawEmail = (emailInput ? emailInput.value : '').trim();
+  const rawPass = (passInput ? passInput.value : '').trim();
+  const normalizedEmail = rawEmail.toLowerCase();
 
-    if (pin && pin !== '1234' && pin.length < 3) {
-      showToast('⚠️ Please enter valid 4-digit PIN (default: 1234)', 'ri-error-warning-line');
+  if (!rawEmail || !rawPass) {
+    showLoginError('தயவுசெய்து Gmail மற்றும் கடவுச்சொல்லை உள்ளிடவும்! (Please enter both Gmail and Password)');
+    return;
+  }
+
+  // 1. ROBUST CHECK FOR HEAD COACH CREDENTIALS
+  const validCoachEmails = [
+    'coach.boopathi@gmail.com',
+    'coach.boopathi@kabaddi.com',
+    'coach.boopathi',
+    'coach@gmail.com',
+    'coach@kabaddi.com'
+  ];
+  if (appData.coachProfile && appData.coachProfile.email) {
+    validCoachEmails.push(appData.coachProfile.email.toLowerCase().trim());
+  }
+
+  let validCoachPasswords = [];
+  if (appData.coachProfile && appData.coachProfile.hasCustomPassword && appData.coachProfile.password) {
+    validCoachPasswords.push(appData.coachProfile.password.trim());
+  } else {
+    validCoachPasswords.push('boopathi123');
+    if (appData.coachProfile && appData.coachProfile.password) {
+      validCoachPasswords.push(appData.coachProfile.password.trim());
+    }
+  }
+
+  if (validCoachEmails.includes(normalizedEmail)) {
+    if (validCoachPasswords.includes(rawPass)) {
+      const sessionData = {
+        role: 'coach',
+        name: (appData.coachProfile && appData.coachProfile.name) ? appData.coachProfile.name : 'Coach Boopathi',
+        email: 'coach.boopathi@gmail.com',
+        loginTime: Date.now()
+      };
+
+      if (!rememberCheckbox || rememberCheckbox.checked) {
+        localStorage.setItem('thaai_tamizhans_auth_session', JSON.stringify(sessionData));
+      } else {
+        sessionStorage.setItem('thaai_tamizhans_auth_session', JSON.stringify(sessionData));
+      }
+      localStorage.removeItem('thaai_tamizhans_logged_out');
+
+      appData.activeRole = 'coach';
+      if (loginScreen) loginScreen.classList.add('hidden');
+      switchRole('coach');
+      showToast(`👑 Welcome Back, Coach Boopathi! Coach Dashboard திறக்கப்பட்டது.`);
+      return;
+    } else {
+      showLoginError('❌ தவறான கடவுச்சொல்! (Incorrect password for Coach Boopathi)');
       return;
     }
+  }
 
-    const sessionData = {
-      role: 'coach',
-      name: username,
-      loginTime: Date.now()
-    };
-    localStorage.setItem('thaai_tamizhans_auth_session', JSON.stringify(sessionData));
-    localStorage.removeItem('thaai_tamizhans_logged_out');
+  // 2. ROBUST CHECK FOR ALL SQUAD PLAYERS (SYNCS LIVE WITH COACH EDITS)
+  const existingPlayers = (appData.players && Array.isArray(appData.players)) ? appData.players : [];
+  const initialPlayers = (typeof INITIAL_KABADDI_DATA !== 'undefined' && Array.isArray(INITIAL_KABADDI_DATA.players)) ? INITIAL_KABADDI_DATA.players : [];
 
-    if (loginScreen) loginScreen.classList.add('hidden');
-    switchRole('coach');
-    showToast(`🎉 Welcome back, ${username}! (தலைமை பயிற்சியாளர்)`);
-  } else {
-    const playerSelect = document.getElementById('playerLoginSelect');
-    const playerId = parseInt(playerSelect ? playerSelect.value : (appData.players[0] ? appData.players[0].id : 1));
-    const player = appData.players.find(p => p.id === playerId) || appData.players[0];
-    const pin = document.getElementById('playerLoginPin')?.value.trim();
+  const playerMap = new Map();
+  initialPlayers.forEach(p => { if (p && p.id) playerMap.set(p.id, p); });
+  existingPlayers.forEach(p => { if (p && p.id) playerMap.set(p.id, p); });
+  const playerList = Array.from(playerMap.values());
 
-    if (pin && pin !== '1234' && pin.length < 3) {
-      showToast('⚠️ Please enter valid 4-digit PIN (default: 1234)', 'ri-error-warning-line');
+  // Priority 1: Match player by their CURRENT name configured by the Coach
+  let matchedPlayer = playerList.find(player => {
+    const cleanName = (player.name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    const exactEmails = [
+      'player.' + cleanName + '@gmail.com',
+      'player.' + cleanName + '@kabaddi.com',
+      cleanName + '@gmail.com',
+      'player.' + cleanName
+    ];
+    if (player.email) exactEmails.push(player.email.toLowerCase().trim());
+    return exactEmails.includes(normalizedEmail);
+  });
+
+  // Priority 2: Fallback base name match
+  if (!matchedPlayer) {
+    matchedPlayer = playerList.find(player => {
+      const baseName = (player.name || '').trim().split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+      const baseEmails = [
+        'player.' + baseName + '@gmail.com',
+        'player.' + baseName + '@kabaddi.com',
+        baseName + '@gmail.com',
+        'player.' + baseName
+      ];
+      return baseEmails.includes(normalizedEmail);
+    });
+  }
+
+  if (matchedPlayer) {
+    const cleanName = (matchedPlayer.name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    const baseName = (matchedPlayer.name || '').trim().split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    // If player updated their password in Settings, ONLY that new password is valid!
+    let validPasswords = [];
+    if (matchedPlayer.hasCustomPassword && matchedPlayer.password) {
+      validPasswords.push(matchedPlayer.password.trim());
+    } else {
+      validPasswords.push(cleanName + '123');
+      if (cleanName === 'boopathik') {
+        validPasswords.push('boopathi123');
+      }
+      if (baseName && baseName !== cleanName && baseName.length >= 3) {
+        validPasswords.push(baseName + '123');
+      }
+      if (matchedPlayer.password) {
+        validPasswords.push(matchedPlayer.password.trim());
+      }
+    }
+
+    if (validPasswords.includes(rawPass)) {
+      const sessionData = {
+        role: 'player',
+        playerId: matchedPlayer.id,
+        name: matchedPlayer.name,
+        jersey: matchedPlayer.jersey,
+        email: matchedPlayer.email || `player.${cleanName}@gmail.com`,
+        loginTime: Date.now()
+      };
+
+      if (!rememberCheckbox || rememberCheckbox.checked) {
+        localStorage.setItem('thaai_tamizhans_auth_session', JSON.stringify(sessionData));
+      } else {
+        sessionStorage.setItem('thaai_tamizhans_auth_session', JSON.stringify(sessionData));
+      }
+      localStorage.removeItem('thaai_tamizhans_logged_out');
+
+      appData.activeRole = 'player';
+      appData.activePlayerId = matchedPlayer.id;
+
+      if (loginScreen) loginScreen.classList.add('hidden');
+      switchRole('player');
+      showToast(`🏃 Welcome, ${matchedPlayer.name} (Jersey ${matchedPlayer.jersey})! Player Dashboard திறக்கப்பட்டது.`);
+      return;
+    } else {
+      showLoginError(`❌ தவறான கடவுச்சொல்! (Password wrong for ${matchedPlayer.name})`);
       return;
     }
-
-    const sessionData = {
-      role: 'player',
-      playerId: player.id,
-      name: player.name,
-      jersey: player.jersey,
-      loginTime: Date.now()
-    };
-    localStorage.setItem('thaai_tamizhans_auth_session', JSON.stringify(sessionData));
-    localStorage.removeItem('thaai_tamizhans_logged_out');
-
-    appData.activePlayerId = player.id;
-    if (loginScreen) loginScreen.classList.add('hidden');
-    switchRole('player');
-    showToast(`🎉 Welcome, ${player.name} (Jersey #${player.jersey})!`);
   }
-}
 
-function quickLogin(role, targetPlayerId) {
-  const loginScreen = document.getElementById('loginScreen');
-
-  if (role === 'coach') {
-    const sessionData = {
-      role: 'coach',
-      name: 'Coach Arun',
-      loginTime: Date.now()
-    };
-    localStorage.setItem('thaai_tamizhans_auth_session', JSON.stringify(sessionData));
-    localStorage.removeItem('thaai_tamizhans_logged_out');
-
-    if (loginScreen) loginScreen.classList.add('hidden');
-    switchRole('coach');
-    showToast('⚡ Quick Login Successful: Logged in as Head Coach Arun!');
-  } else {
-    let player = appData.players.find(p => p.id === targetPlayerId);
-    if (!player) {
-      player = appData.players[0];
-    }
-
-    const sessionData = {
-      role: 'player',
-      playerId: player.id,
-      name: player.name,
-      jersey: player.jersey,
-      loginTime: Date.now()
-    };
-    localStorage.setItem('thaai_tamizhans_auth_session', JSON.stringify(sessionData));
-    localStorage.removeItem('thaai_tamizhans_logged_out');
-
-    appData.activePlayerId = player.id;
-    if (loginScreen) loginScreen.classList.add('hidden');
-    switchRole('player');
-    showToast(`⚡ Quick Login: Welcome, ${player.name} (Jersey #${player.jersey})!`);
-  }
+  // 3. STRICT REJECTION OF ANY OTHER EMAIL / UNAUTHORIZED ACCOUNT
+  showLoginError('❌ தவறான Email முகவரி அல்லது கடவுச்சொல்! பதிவுசெய்யப்பட்ட 16 வீரர்கள் அல்லது தலைமை பயிற்சியாளரின் அதிகாரப்பூர்வ Gmail மட்டுமே பயன்படுத்தவும்.');
 }
 
 function handleUserLogout() {
   if (confirm('Are you sure you want to log out from தாய் தமிழன்ஸ் Portal?')) {
     localStorage.removeItem('thaai_tamizhans_auth_session');
+    sessionStorage.removeItem('thaai_tamizhans_auth_session');
     localStorage.setItem('thaai_tamizhans_logged_out', 'true');
     
     const loginScreen = document.getElementById('loginScreen');
+    const emailInput = document.getElementById('loginUserEmail');
+    const passInput = document.getElementById('loginPassword');
+    const errorAlert = document.getElementById('loginErrorMessage');
+
+    if (emailInput) emailInput.value = '';
+    if (passInput) passInput.value = '';
+    if (errorAlert) {
+      errorAlert.style.display = 'none';
+      errorAlert.innerHTML = '';
+    }
+
     if (loginScreen) {
       loginScreen.classList.remove('hidden');
-      switchLoginTab(appData.activeRole || 'coach');
-      populatePlayerLoginDropdown();
     }
     showToast('👋 Logged out successfully! Sign in to continue.', 'ri-logout-circle-line');
   }
@@ -1503,7 +1709,7 @@ function renderAppShell() {
     const topName = document.getElementById('topUserName');
     const topRole = document.getElementById('topUserRole');
     const topAvatar = document.getElementById('topUserAvatar');
-    if (topName) topName.innerText = (appData.coachProfile && appData.coachProfile.name) ? appData.coachProfile.name : 'Coach Arun';
+    if (topName) topName.innerText = (appData.coachProfile && appData.coachProfile.name) ? appData.coachProfile.name : 'Coach Boopathi';
     if (topRole) topRole.innerText = 'Head Coach';
     if (topAvatar) topAvatar.src = (appData.coachProfile && appData.coachProfile.photo) ? appData.coachProfile.photo : 'assets/thaai_tamizhans_logo.jpg';
   } else {
@@ -1604,13 +1810,15 @@ function handleFileChoose(fileInput, targetInputId, previewImgId) {
           jersey: jersey
         });
       } else if (targetInputId === 'profilePhotoInput') {
+        const activeP = (appData.players && appData.players.find(p => p.id === appData.activePlayerId)) || (appData.players && appData.players[0]);
+        const pJersey = appData.activeRole === 'coach' ? 'COACH' : (activeP?.jersey || '#01');
         showToast('Profile photo loaded! Opening adjuster...', 'ri-crop-line');
         openPhotoAdjuster({
           imageUrl: dataUrl,
           targetType: 'coachProfile',
           targetInputId: targetInputId,
           targetPreviewId: previewImgId,
-          jersey: appData.activeRole === 'coach' ? 'COACH' : '#07'
+          jersey: pJersey
         });
       } else {
         showToast('Real Image loaded from file!');
@@ -2393,6 +2601,8 @@ function openModalAddPlayer() {
   document.getElementById('newPlayerJersey').value = '';
   document.getElementById('newPlayerPos').value = 'Raider';
   document.getElementById('newPlayerContact').value = '';
+  if (document.getElementById('newPlayerEmail')) document.getElementById('newPlayerEmail').value = '';
+  if (document.getElementById('newPlayerPassword')) document.getElementById('newPlayerPassword').value = '';
   document.getElementById('newPlayerPhoto').value = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80';
   document.getElementById('playerPhotoPreview').src = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80';
   openModal('modalAddPlayer');
@@ -2402,12 +2612,22 @@ function editPlayer(id) {
   const p = appData.players.find(item => item.id === id);
   if (!p) return;
 
+  const cleanName = (p.name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+  const derivedEmail = `player.${cleanName}@gmail.com`;
+  const derivedPassword = `${cleanName}123`;
+
   document.getElementById('playerEditId').value = p.id;
   document.getElementById('modalPlayerHeader').innerHTML = `<i class="ri-edit-line"></i> Edit Player — ${p.name}`;
   document.getElementById('newPlayerName').value = p.name;
   document.getElementById('newPlayerJersey').value = p.jersey;
   document.getElementById('newPlayerPos').value = p.position;
   document.getElementById('newPlayerContact').value = p.contact || '';
+  if (document.getElementById('newPlayerEmail')) {
+    document.getElementById('newPlayerEmail').value = derivedEmail;
+  }
+  if (document.getElementById('newPlayerPassword')) {
+    document.getElementById('newPlayerPassword').value = derivedPassword;
+  }
   document.getElementById('newPlayerPhoto').value = p.photo;
   document.getElementById('playerPhotoPreview').src = p.photo;
   openModal('modalAddPlayer');
@@ -2425,13 +2645,34 @@ function deletePlayer(id) {
   }
 }
 
+function autoFillPlayerCredentials(name) {
+  const clean = (name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+  const emailInput = document.getElementById('newPlayerEmail');
+  const passInput = document.getElementById('newPlayerPassword');
+  if (emailInput) {
+    emailInput.value = clean ? `player.${clean}@gmail.com` : '';
+  }
+  if (passInput) {
+    passInput.value = clean ? `${clean}123` : '';
+  }
+}
+
 function handleSavePlayer(e) {
   e.preventDefault();
   const editId = document.getElementById('playerEditId').value;
-  const name = document.getElementById('newPlayerName').value;
-  const jersey = document.getElementById('newPlayerJersey').value;
+  const name = document.getElementById('newPlayerName').value.trim();
+  const jersey = document.getElementById('newPlayerJersey').value.trim();
   const position = document.getElementById('newPlayerPos').value;
-  const contact = document.getElementById('newPlayerContact').value;
+  const contact = document.getElementById('newPlayerContact').value.trim();
+  const emailInput = document.getElementById('newPlayerEmail');
+  const passInput = document.getElementById('newPlayerPassword');
+  
+  // Dynamically derive official credentials strictly matching the player's name
+  const cleanName = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const email = `player.${cleanName}@gmail.com`;
+  const password = `${cleanName}123`;
+  if (emailInput) emailInput.value = email;
+  if (passInput) passInput.value = password;
   const photo = document.getElementById('newPlayerPhoto').value;
 
   if (editId) {
@@ -2442,8 +2683,10 @@ function handleSavePlayer(e) {
       player.position = position;
       player.contact = contact;
       player.photo = photo;
+      player.email = email;
+      player.password = password;
     }
-    showToast(`Player ${name} updated successfully!`);
+    showToast(`Player ${name} updated! (Gmail: ${email})`);
   } else {
     const newPlayer = {
       id: Date.now(),
@@ -2452,11 +2695,13 @@ function handleSavePlayer(e) {
       position,
       status: 'Active',
       contact: contact || '+91 98000 00000',
+      email,
+      password,
       photo: photo || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
       attendance: { present: 0, absent: 0, late: 0, percentage: 100 }
     };
     appData.players.push(newPlayer);
-    showToast(`New player ${name} added to squad!`);
+    showToast(`New player ${name} added! (Gmail: ${email})`);
   }
 
   persistData();
@@ -5175,24 +5420,65 @@ document.addEventListener('keydown', (e) => {
 
 function renderProfileHTML() {
   const isCoach = appData.activeRole === 'coach';
-  const profile = isCoach ? appData.coachProfile : (appData.players.find(p => p.id === appData.activePlayerId) || appData.players[0]);
+  let profile;
+  let playerEmail = '';
+
+  if (isCoach) {
+    profile = appData.coachProfile || { name: 'Coach Boopathi', experience: 'Pro Kabaddi Head Coach' };
+  } else {
+    profile = (appData.players && appData.players.find(p => p.id === appData.activePlayerId)) || (appData.players && appData.players[0]) || { name: 'Player', jersey: '#01', position: 'Raider' };
+
+    // Retrieve the exact official Gmail used by the player during authentication
+    let savedSession = localStorage.getItem('thaai_tamizhans_auth_session') || sessionStorage.getItem('thaai_tamizhans_auth_session');
+    if (savedSession) {
+      try {
+        const session = JSON.parse(savedSession);
+        if (session && session.role === 'player' && session.email) {
+          playerEmail = session.email;
+        }
+      } catch (e) {}
+    }
+
+    if (!playerEmail) {
+      const cleanName = (profile.name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+      playerEmail = profile.email || `player.${cleanName}@gmail.com`;
+    }
+  }
 
   return `
-    <div style="margin-bottom: 24px;">
-      <h2 style="font-size: 1.6rem; font-weight:800;" class="text-gradient-cyan">👤 ${isCoach ? 'Coach Profile' : 'My Player Profile'}</h2>
+    <div style="margin-bottom: 24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+      <div>
+        <h2 style="font-size: 1.6rem; font-weight:800; margin:0;" class="text-gradient-cyan">
+          👤 ${isCoach ? 'Coach Profile' : 'My Player Profile'}
+        </h2>
+        <p style="font-size:0.84rem; color:var(--text-muted); margin:4px 0 0 0;">
+          ${isCoach ? 'Manage your coaching credentials and profile photo' : 'Official Squad Player Card & Credentials'}
+        </p>
+      </div>
+      ${!isCoach ? `
+        <div style="display:flex; align-items:center; gap:8px; background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); border-radius:20px; padding:6px 14px; font-size:0.8rem; color:#fbbf24; font-weight:700;">
+          <i class="ri-shield-keyhole-line"></i> 🔒 Coach Managed Profile
+        </div>
+      ` : ''}
     </div>
 
     <div class="glass-card" style="max-width:640px;">
       <form onsubmit="handleSaveProfile(event)">
         
+        <!-- Profile Avatar Banner -->
         <div style="display:flex; align-items:center; gap:20px; margin-bottom:24px; background:rgba(0,0,0,0.3); padding:16px; border-radius:16px; border:1px solid var(--border-color);">
           <div style="position:relative; width:90px; height:90px; flex-shrink:0;">
-            <img src="${profile.photo}" id="profileAvatarPreview" style="width:100%; height:100%; border-radius:50%; object-fit:cover; object-position:center 20%; border:3px solid var(--accent-orange); box-shadow:var(--glow-orange);">
+            <img src="${profile.photo}" id="profileAvatarPreview" alt="${profile.name}" style="width:100%; height:100%; border-radius:50%; object-fit:cover; object-position:center 20%; border:3px solid var(--accent-orange); box-shadow:var(--glow-orange);">
           </div>
-          <div>
-            <h3 style="font-size:1.3rem; font-weight:800; color:#fff;">${profile.name}</h3>
-            <p style="color:var(--accent-cyan); font-weight:700; font-size:0.85rem;">${isCoach ? profile.experience : profile.position + ' (' + profile.jersey + ')'}</p>
-            <div style="margin-top:6px; display:flex; gap:8px; align-items:center;">
+          <div style="flex:1;">
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+              <h3 style="font-size:1.3rem; font-weight:800; color:#fff; margin:0;">${profile.name}</h3>
+              ${!isCoach ? `<span style="background:var(--accent-orange); color:#000; font-weight:800; font-size:0.75rem; padding:2px 8px; border-radius:12px;">Jersey ${profile.jersey}</span>` : ''}
+            </div>
+            <p style="color:var(--accent-cyan); font-weight:700; font-size:0.85rem; margin:4px 0 8px 0;">
+              ${isCoach ? (profile.experience || 'Pro Kabaddi Head Coach') : (profile.position + ' • ' + (profile.status || 'Active Squad'))}
+            </p>
+            <div style="display:flex; gap:8px; align-items:center;">
               <button type="button" class="btn btn-sm btn-outline" style="color:var(--accent-cyan); border-color:var(--accent-cyan);" onclick="openPhotoAdjusterForCurrentProfile()">
                 <i class="ri-crop-line"></i> ✂️ Adjust / Crop Photo
               </button>
@@ -5200,42 +5486,95 @@ function renderProfileHTML() {
           </div>
         </div>
 
+        <!-- Photo Upload Dropzone (Player & Coach Can Both Change Photo) -->
         <div class="form-group">
-          <label>Upload Photo</label>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <label style="margin:0;"><i class="ri-camera-lens-line"></i> Upload Photo</label>
+            ${!isCoach ? '<span style="font-size:0.75rem; color:#38ef7d; font-weight:700;">✅ புகைப்படத்தை மாற்றலாம் (Photo Editable)</span>' : ''}
+          </div>
           <input type="hidden" id="profilePhotoInput" value="${profile.photo}">
-          
           <input type="file" id="profileFilePicker" accept="image/*" style="display:none;" onchange="handleFileChoose(this, 'profilePhotoInput', 'profileAvatarPreview')">
           
           <div class="image-upload-dropzone" onclick="document.getElementById('profileFilePicker').click()">
             <i class="ri-image-add-line" style="font-size:1.4rem; color:var(--accent-cyan);"></i>
             <div style="font-size:0.85rem; font-weight:700; color:#fff;">Upload Photo</div>
+            <div style="font-size:0.75rem; color:#94a3b8;">Click to browse device or adjust face position</div>
           </div>
-        </div>
-
-
-        <div class="form-group">
-          <label>Full Name</label>
-          <input type="text" class="form-control" id="profileNameInput" value="${profile.name}" required>
-        </div>
-
-        <div class="form-group">
-          <label>Phone Contact</label>
-          <input type="text" class="form-control" id="profilePhoneInput" value="${profile.phone || profile.contact || '+91 98765 43210'}">
-        </div>
-
-        <div class="form-group">
-          <label>Email Address</label>
-          <input type="email" class="form-control" id="profileEmailInput" value="${profile.email || 'coach@kabaddi.com'}">
         </div>
 
         ${isCoach ? `
+          <!-- Coach Editable Fields -->
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" class="form-control" id="profileNameInput" value="${profile.name}" required>
+          </div>
+
+          <div class="form-group">
+            <label>Phone Contact</label>
+            <input type="text" class="form-control" id="profilePhoneInput" value="${profile.phone || profile.contact || '+91 98765 43210'}">
+          </div>
+
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" class="form-control" id="profileEmailInput" value="${profile.email || 'coach.boopathi@gmail.com'}">
+          </div>
+
           <div class="form-group">
             <label>Coaching Experience / Certification</label>
-            <input type="text" class="form-control" id="profileExpInput" value="${profile.experience}">
+            <input type="text" class="form-control" id="profileExpInput" value="${profile.experience || 'Pro Kabaddi Certified Coach'}">
           </div>
-        ` : ''}
 
-        <button type="submit" class="btn btn-primary"><i class="ri-check-double-line"></i> Save Profile</button>
+          <button type="submit" class="btn btn-primary" style="margin-top:16px;">
+            <i class="ri-check-double-line"></i> Save Profile
+          </button>
+        ` : `
+          <!-- Player Read-Only / Coach-Managed Profile Details -->
+          <div class="form-group">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <label style="margin:0;"><i class="ri-user-3-line"></i> Full Name</label>
+              <span style="font-size:0.75rem; color:#94a3b8;"><i class="ri-lock-2-line"></i> பயிற்சியாளரால் நிர்வகிக்கப்படுகிறது</span>
+            </div>
+            <input type="text" class="form-control" id="profileNameInput" value="${profile.name}" readonly disabled style="background:rgba(255,255,255,0.04); cursor:not-allowed; border-color:rgba(255,255,255,0.1); color:#e2e8f0; font-weight:600;">
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+              <label><i class="ri-t-shirt-line"></i> Jersey Number</label>
+              <input type="text" class="form-control" value="${profile.jersey}" readonly disabled style="background:rgba(255,255,255,0.04); cursor:not-allowed; border-color:rgba(255,255,255,0.1); color:var(--accent-orange); font-weight:800;">
+            </div>
+            <div class="form-group">
+              <label><i class="ri-focus-3-line"></i> Position</label>
+              <input type="text" class="form-control" value="${profile.position}" readonly disabled style="background:rgba(255,255,255,0.04); cursor:not-allowed; border-color:rgba(255,255,255,0.1); color:var(--accent-cyan); font-weight:700;">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <label style="margin:0;"><i class="ri-phone-line"></i> Phone Contact</label>
+              <span style="font-size:0.75rem; color:#94a3b8;"><i class="ri-lock-2-line"></i> Coach Managed</span>
+            </div>
+            <input type="text" class="form-control" id="profilePhoneInput" value="${profile.contact || profile.phone || '+91 90000 00000'}" readonly disabled style="background:rgba(255,255,255,0.04); cursor:not-allowed; border-color:rgba(255,255,255,0.1); color:#e2e8f0;">
+          </div>
+
+          <div class="form-group">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <label style="margin:0;"><i class="ri-mail-line"></i> Official Login Gmail</label>
+              <span style="font-size:0.75rem; color:#38ef7d; font-weight:700;"><i class="ri-checkbox-circle-line"></i> நீங்கள் உள்நுழைந்த Gmail</span>
+            </div>
+            <input type="email" class="form-control" id="profileEmailInput" value="${playerEmail}" readonly disabled style="background:rgba(56,239,125,0.08); cursor:not-allowed; border-color:rgba(56,239,125,0.4); color:#38ef7d; font-weight:700; font-size:0.95rem;">
+          </div>
+
+          <!-- Photo Update Only Button for Player -->
+          <div style="margin-top:20px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.08);">
+            <button type="submit" class="btn btn-green" style="width:100%; justify-content:center; padding:12px; font-weight:800;">
+              <i class="ri-camera-lens-line"></i> 📸 Save Profile Photo (புகைப்படத்தை சேமி)
+            </button>
+            <div style="margin-top:10px; font-size:0.78rem; color:#94a3b8; display:flex; align-items:center; justify-content:center; gap:6px;">
+              <i class="ri-information-line" style="color:var(--accent-orange); font-size:0.95rem;"></i>
+              <span>பெயர், தொடர்பு மற்றும் பிற விவரங்கள் தலைமை பயிற்சியாளரால் மட்டுமே மாற்றப்படும்.</span>
+            </div>
+          </div>
+        `}
       </form>
     </div>
   `;
@@ -5247,38 +5586,50 @@ function selectCoachPresetPhoto(url) {
 }
 
 function handleSaveProfile(e) {
-  e.preventDefault();
+  if (e) e.preventDefault();
   const isCoach = appData.activeRole === 'coach';
-  const newPhoto = document.getElementById('profilePhotoInput').value;
-  const newName = document.getElementById('profileNameInput').value;
-  const newPhone = document.getElementById('profilePhoneInput').value;
-  const newEmail = document.getElementById('profileEmailInput').value;
+  const newPhoto = document.getElementById('profilePhotoInput')?.value;
 
   if (isCoach) {
+    const newName = document.getElementById('profileNameInput')?.value || appData.coachProfile.name;
+    const newPhone = document.getElementById('profilePhoneInput')?.value || appData.coachProfile.phone;
+    const newEmail = document.getElementById('profileEmailInput')?.value || appData.coachProfile.email;
     appData.coachProfile.photo = newPhoto;
     appData.coachProfile.name = newName;
     appData.coachProfile.phone = newPhone;
     appData.coachProfile.email = newEmail;
-    appData.coachProfile.experience = document.getElementById('profileExpInput').value;
+    if (document.getElementById('profileExpInput')) {
+      appData.coachProfile.experience = document.getElementById('profileExpInput').value;
+    }
+    showToast('Coach profile and details saved!');
   } else {
-    const activePlayer = appData.players.find(p => p.id === appData.activePlayerId) || appData.players[0];
-    activePlayer.photo = newPhoto;
-    activePlayer.name = newName;
-    activePlayer.contact = newPhone;
-    activePlayer.email = newEmail;
+    // Player mode: ONLY photo is updated by the player! Coach-managed fields are preserved.
+    const activePlayer = (appData.players && appData.players.find(p => p.id === appData.activePlayerId)) || (appData.players && appData.players[0]);
+    if (activePlayer && newPhoto) {
+      activePlayer.photo = newPhoto;
+    }
+    showToast('📸 Profile photo updated successfully!', 'ri-image-edit-line');
   }
 
   persistData();
-  if (isCoach && window.FirebaseSync && typeof window.FirebaseSync.syncCoachProfile === 'function') {
-    window.FirebaseSync.syncCoachProfile(appData.coachProfile);
-  }
   renderAppShell();
   renderCurrentView();
-  showToast('Profile photo and details saved & synced live to cloud!');
 }
 
 function renderSettingsHTML() {
   const currentTheme = localStorage.getItem('thaai_tamizhans_theme') || 'cyber-neon';
+  const isCoach = appData.activeRole === 'coach';
+  const userAccount = isCoach 
+    ? (appData.coachProfile || { name: 'Coach Boopathi' }) 
+    : ((appData.players && appData.players.find(p => p.id === appData.activePlayerId)) || (appData.players && appData.players[0]) || { name: 'Player', jersey: '#01' });
+
+  let userEmail = '';
+  if (isCoach) {
+    userEmail = (appData.coachProfile && appData.coachProfile.email) ? appData.coachProfile.email : 'coach.boopathi@gmail.com';
+  } else {
+    const cleanName = (userAccount.name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    userEmail = userAccount.email || `player.${cleanName}@gmail.com`;
+  }
 
   return `
     <div style="margin-bottom: 24px;">
@@ -5300,43 +5651,43 @@ function renderSettingsHTML() {
         <div onclick="setAppTheme('royal-gold')" style="cursor:pointer; padding:16px 12px; border-radius:16px; border:2px solid ${currentTheme === 'royal-gold' ? 'var(--accent-gold)' : 'var(--glass-border)'}; background:rgba(251,191,36,0.08); text-align:center; transition:all 0.2s ease; box-shadow:${currentTheme === 'royal-gold' ? '0 0 20px rgba(251,191,36,0.35)' : 'none'};">
           <div style="width:28px; height:28px; border-radius:50%; background:#fbbf24; margin:0 auto 8px; box-shadow:0 0 14px #fbbf24;"></div>
           <div style="font-weight:800; font-size:0.88rem; color:var(--text-main);">👑 Royal Gold</div>
-          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">24K Gold & Onyx</div>
+          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Gold & Obsidian Luxury</div>
         </div>
 
-        <div onclick="setAppTheme('3d-kabaddi-arena')" style="cursor:pointer; padding:16px 12px; border-radius:16px; border:2px solid ${currentTheme === '3d-kabaddi-arena' ? '#ff5500' : 'var(--glass-border)'}; background:rgba(255,85,0,0.08); text-align:center; transition:all 0.2s ease; box-shadow:${currentTheme === '3d-kabaddi-arena' ? '0 0 20px rgba(255,85,0,0.45)' : 'none'};">
-          <div style="width:28px; height:28px; border-radius:50%; background:#ff5500; margin:0 auto 8px; box-shadow:0 0 14px #ff5500, 0 0 22px #ffb700;"></div>
-          <div style="font-weight:800; font-size:0.88rem; color:var(--text-main);">🔥 3D Arena</div>
-          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Pro Kabaddi Court</div>
+        <div onclick="setAppTheme('3d-stadium-night')" style="cursor:pointer; padding:16px 12px; border-radius:16px; border:2px solid ${currentTheme === '3d-stadium-night' ? '#ff3b00' : 'var(--glass-border)'}; background:rgba(255,59,0,0.08); text-align:center; transition:all 0.2s ease; box-shadow:${currentTheme === '3d-stadium-night' ? '0 0 20px rgba(255,59,0,0.45)' : 'none'};">
+          <div style="width:28px; height:28px; border-radius:50%; background:#ff3b00; margin:0 auto 8px; box-shadow:0 0 14px #ff3b00, 0 0 22px #ff8800;"></div>
+          <div style="font-weight:800; font-size:0.88rem; color:var(--text-main);">🏟️ 3D Stadium Night</div>
+          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Floodlit Arena & Spotlights</div>
         </div>
 
-        <div onclick="setAppTheme('3d-super-raider')" style="cursor:pointer; padding:16px 12px; border-radius:16px; border:2px solid ${currentTheme === '3d-super-raider' ? '#00f0ff' : 'var(--glass-border)'}; background:rgba(0,240,255,0.08); text-align:center; transition:all 0.2s ease; box-shadow:${currentTheme === '3d-super-raider' ? '0 0 20px rgba(0,240,255,0.45)' : 'none'};">
-          <div style="width:28px; height:28px; border-radius:50%; background:#00f0ff; margin:0 auto 8px; box-shadow:0 0 14px #00f0ff, 0 0 22px #8b5cf6;"></div>
-          <div style="font-weight:800; font-size:0.88rem; color:var(--text-main);">⚡ 3D Raider</div>
-          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Velocity Streaks</div>
+        <div onclick="setAppTheme('3d-raid-fire')" style="cursor:pointer; padding:16px 12px; border-radius:16px; border:2px solid ${currentTheme === '3d-raid-fire' ? '#ff4500' : 'var(--glass-border)'}; background:rgba(255,69,0,0.08); text-align:center; transition:all 0.2s ease; box-shadow:${currentTheme === '3d-raid-fire' ? '0 0 20px rgba(255,69,0,0.45)' : 'none'};">
+          <div style="width:28px; height:28px; border-radius:50%; background:#ff4500; margin:0 auto 8px; box-shadow:0 0 14px #ff4500, 0 0 22px #ffbb00;"></div>
+          <div style="font-weight:800; font-size:0.88rem; color:var(--text-main);">🔥 3D Raid Fire</div>
+          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Blazing Clay & Flame Aura</div>
         </div>
 
-        <div onclick="setAppTheme('3d-tackle-shield')" style="cursor:pointer; padding:16px 12px; border-radius:16px; border:2px solid ${currentTheme === '3d-tackle-shield' ? '#00ff88' : 'var(--glass-border)'}; background:rgba(0,255,136,0.08); text-align:center; transition:all 0.2s ease; box-shadow:${currentTheme === '3d-tackle-shield' ? '0 0 20px rgba(0,255,136,0.45)' : 'none'};">
-          <div style="width:28px; height:28px; border-radius:50%; background:#00ff88; margin:0 auto 8px; box-shadow:0 0 14px #00ff88, 0 0 22px #ffd700;"></div>
-          <div style="font-weight:800; font-size:0.88rem; color:var(--text-main);">🛡️ 3D Defence</div>
-          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Ankle Lock Energy Web</div>
+        <div onclick="setAppTheme('3d-super-tackle')" style="cursor:pointer; padding:16px 12px; border-radius:16px; border:2px solid ${currentTheme === '3d-super-tackle' ? '#00e5ff' : 'var(--glass-border)'}; background:rgba(0,229,255,0.08); text-align:center; transition:all 0.2s ease; box-shadow:${currentTheme === '3d-super-tackle' ? '0 0 20px rgba(0,229,255,0.45)' : 'none'};">
+          <div style="width:28px; height:28px; border-radius:50%; background:#00e5ff; margin:0 auto 8px; box-shadow:0 0 14px #00e5ff, 0 0 22px #7c4dff;"></div>
+          <div style="font-weight:800; font-size:0.88rem; color:var(--text-main);">⚡ 3D Super Tackle</div>
+          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Electric Cyan Shockwave</div>
         </div>
 
-        <div onclick="setAppTheme('3d-frog-jump')" style="cursor:pointer; padding:16px 12px; border-radius:16px; border:2px solid ${currentTheme === '3d-frog-jump' ? '#00ff88' : 'var(--glass-border)'}; background:rgba(0,255,136,0.08); text-align:center; transition:all 0.2s ease; box-shadow:${currentTheme === '3d-frog-jump' ? '0 0 20px rgba(0,255,136,0.45)' : 'none'};">
-          <div style="width:28px; height:28px; border-radius:50%; background:#00ff88; margin:0 auto 8px; box-shadow:0 0 14px #00ff88, 0 0 22px #facc15;"></div>
-          <div style="font-weight:800; font-size:0.88rem; color:var(--text-main);">🦘 3D Frog Jump</div>
-          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Airborne Arc & Shockwave</div>
+        <div onclick="setAppTheme('3d-golden-trophy')" style="cursor:pointer; padding:16px 12px; border-radius:16px; border:2px solid ${currentTheme === '3d-golden-trophy' ? '#ffd700' : 'var(--glass-border)'}; background:rgba(255,215,0,0.08); text-align:center; transition:all 0.2s ease; box-shadow:${currentTheme === '3d-golden-trophy' ? '0 0 20px rgba(255,215,0,0.45)' : 'none'};">
+          <div style="width:28px; height:28px; border-radius:50%; background:#ffd700; margin:0 auto 8px; box-shadow:0 0 14px #ffd700, 0 0 22px #ff8c00;"></div>
+          <div style="font-weight:800; font-size:0.88rem; color:var(--text-main);">🏆 3D Champion Gold</div>
+          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">PKL Cup & Victory Glaze</div>
         </div>
 
-        <div onclick="setAppTheme('3d-thigh-hold')" style="cursor:pointer; padding:16px 12px; border-radius:16px; border:2px solid ${currentTheme === '3d-thigh-hold' ? '#ff4500' : 'var(--glass-border)'}; background:rgba(255,69,0,0.08); text-align:center; transition:all 0.2s ease; box-shadow:${currentTheme === '3d-thigh-hold' ? '0 0 20px rgba(255,69,0,0.45)' : 'none'};">
-          <div style="width:28px; height:28px; border-radius:50%; background:#ff4500; margin:0 auto 8px; box-shadow:0 0 14px #ff4500, 0 0 22px #dc2626;"></div>
-          <div style="font-weight:800; font-size:0.88rem; color:var(--text-main);">🦵 3D Thigh Hold</div>
-          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Iron Grip & Ground Cracks</div>
+        <div onclick="setAppTheme('3d-clay-warrior')" style="cursor:pointer; padding:16px 12px; border-radius:16px; border:2px solid ${currentTheme === '3d-clay-warrior' ? '#d97706' : 'var(--glass-border)'}; background:rgba(217,119,6,0.08); text-align:center; transition:all 0.2s ease; box-shadow:${currentTheme === '3d-clay-warrior' ? '0 0 20px rgba(217,119,6,0.45)' : 'none'};">
+          <div style="width:28px; height:28px; border-radius:50%; background:#d97706; margin:0 auto 8px; box-shadow:0 0 14px #d97706, 0 0 22px #92400e;"></div>
+          <div style="font-weight:800; font-size:0.88rem; color:var(--text-main);">🤼 3D Clay Warrior</div>
+          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Traditional Mud Court</div>
         </div>
 
-        <div onclick="setAppTheme('3d-toe-touch')" style="cursor:pointer; padding:16px 12px; border-radius:16px; border:2px solid ${currentTheme === '3d-toe-touch' ? '#00e5ff' : 'var(--glass-border)'}; background:rgba(0,229,255,0.08); text-align:center; transition:all 0.2s ease; box-shadow:${currentTheme === '3d-toe-touch' ? '0 0 20px rgba(0,229,255,0.45)' : 'none'};">
-          <div style="width:28px; height:28px; border-radius:50%; background:#00e5ff; margin:0 auto 8px; box-shadow:0 0 14px #00e5ff, 0 0 22px #ffe600;"></div>
-          <div style="font-weight:800; font-size:0.88rem; color:var(--text-main);">🎯 3D Toe Touch</div>
-          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Target Lock & Bonus Laser</div>
+        <div onclick="setAppTheme('3d-neon-cyberpunk')" style="cursor:pointer; padding:16px 12px; border-radius:16px; border:2px solid ${currentTheme === '3d-neon-cyberpunk' ? '#00f2fe' : 'var(--glass-border)'}; background:rgba(0,242,254,0.08); text-align:center; transition:all 0.2s ease; box-shadow:${currentTheme === '3d-neon-cyberpunk' ? '0 0 20px rgba(0,242,254,0.45)' : 'none'};">
+          <div style="width:28px; height:28px; border-radius:50%; background:#00f2fe; margin:0 auto 8px; box-shadow:0 0 14px #00f2fe, 0 0 22px #ec4899;"></div>
+          <div style="font-weight:800; font-size:0.88rem; color:var(--text-main);">🌆 3D Neon Cyber</div>
+          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Futuristic Laser Arena</div>
         </div>
 
         <div onclick="setAppTheme('3d-thalaivas-roar')" style="cursor:pointer; padding:16px 12px; border-radius:16px; border:2px solid ${currentTheme === '3d-thalaivas-roar' ? '#ffd700' : 'var(--glass-border)'}; background:rgba(255,215,0,0.08); text-align:center; transition:all 0.2s ease; box-shadow:${currentTheme === '3d-thalaivas-roar' ? '0 0 20px rgba(255,215,0,0.45)' : 'none'};">
@@ -5347,8 +5698,8 @@ function renderSettingsHTML() {
       </div>
     </div>
 
-    <!-- Firebase Real-Time Cloud Sync Card -->
-    <div class="glass-card" style="max-width:920px; margin-bottom:24px;">
+    <!-- Firebase Real-Time Cloud Sync Card (Hidden as requested) -->
+    <div class="glass-card" style="display:none; max-width:920px; margin-bottom:24px;">
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
         <div>
           <h3 style="font-size:1.15rem; font-weight:800; margin:0;" class="text-gradient-orange">
@@ -5404,18 +5755,152 @@ function renderSettingsHTML() {
 
     <!-- Security & Password -->
     <div class="glass-card" style="max-width:700px;">
-      <h3 style="font-size:1rem; margin-bottom:16px;" class="text-gradient-cyan">Security & Password</h3>
-      <div class="form-group">
-        <label>Current Password</label>
-        <input type="password" class="form-control" value="••••••••">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+        <h3 style="font-size:1.15rem; font-weight:800; margin:0;" class="text-gradient-cyan">
+          <i class="ri-lock-password-line"></i> Security & Password (கடவுச்சொல் மாற்றுதல்)
+        </h3>
+        <span style="font-size:0.8rem; background:rgba(0,242,254,0.1); border:1px solid rgba(0,242,254,0.3); border-radius:12px; padding:3px 10px; color:var(--accent-cyan); font-weight:700;">
+          ${isCoach ? '👑 Head Coach' : `🏃 ${userAccount.name} (${userAccount.jersey})`}
+        </span>
       </div>
-      <div class="form-group">
-        <label>New Password</label>
-        <input type="password" class="form-control" placeholder="Enter new password">
-      </div>
-      <button class="btn btn-court btn-sm" onclick="showToast('Password updated!')">Update Password</button>
+
+      <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:16px;">
+        உங்கள் உள்நுழைவுக் கடவுச்சொல்லை மாற்றியவுடன், அடுத்தமுறை Login செய்யும்போது இந்த புதிய கடவுச்சொல் மட்டுமே ஏற்றுக்கொள்ளப்படும்.
+      </p>
+
+      <form onsubmit="handleUpdateUserPassword(event)">
+        <div class="form-group">
+          <label><i class="ri-mail-line"></i> Account Email (மின்னஞ்சல்)</label>
+          <input type="text" class="form-control" value="${userEmail}" readonly disabled style="background:rgba(255,255,255,0.04); cursor:not-allowed; border-color:rgba(255,255,255,0.1); color:#38ef7d; font-weight:700;">
+        </div>
+
+        <div class="form-group">
+          <label><i class="ri-key-line"></i> Current Password (தற்போதைய கடவுச்சொல்)</label>
+          <div style="position:relative;">
+            <input type="password" class="form-control" id="settingsCurrentPassword" placeholder="Enter current password" required style="padding-right:44px;">
+            <button type="button" onclick="toggleInputPasswordVisibility('settingsCurrentPassword', this)" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:#94a3b8; cursor:pointer; font-size:1.1rem; padding:4px;">
+              <i class="ri-eye-line"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label><i class="ri-lock-unlock-line"></i> New Password (புதிய கடவுச்சொல்)</label>
+          <div style="position:relative;">
+            <input type="password" class="form-control" id="settingsNewPassword" placeholder="Enter new password (min 4 characters)" required style="padding-right:44px;">
+            <button type="button" onclick="toggleInputPasswordVisibility('settingsNewPassword', this)" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:#94a3b8; cursor:pointer; font-size:1.1rem; padding:4px;">
+              <i class="ri-eye-line"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label><i class="ri-checkbox-circle-line"></i> Confirm New Password (புதிய கடவுச்சொல்லை உறுதிப்படுத்துக)</label>
+          <div style="position:relative;">
+            <input type="password" class="form-control" id="settingsConfirmPassword" placeholder="Re-enter new password" required style="padding-right:44px;">
+            <button type="button" onclick="toggleInputPasswordVisibility('settingsConfirmPassword', this)" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:#94a3b8; cursor:pointer; font-size:1.1rem; padding:4px;">
+              <i class="ri-eye-line"></i>
+            </button>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; flex-wrap:wrap; gap:12px;">
+          <button type="submit" class="btn btn-green" style="padding:10px 20px; font-weight:800;">
+            <i class="ri-check-double-line"></i> Update Password (கடவுச்சொல் மாற்று)
+          </button>
+          <div style="font-size:0.76rem; color:#94a3b8;">
+            <i class="ri-shield-check-line" style="color:#38ef7d;"></i> Real-time Authentication Sync
+          </div>
+        </div>
+      </form>
     </div>
   `;
+}
+
+function toggleInputPasswordVisibility(inputId, btnEl) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    if (btnEl) btnEl.innerHTML = '<i class="ri-eye-off-line"></i>';
+  } else {
+    input.type = 'password';
+    if (btnEl) btnEl.innerHTML = '<i class="ri-eye-line"></i>';
+  }
+}
+
+function handleUpdateUserPassword(e) {
+  if (e) e.preventDefault();
+  const currentPassInput = document.getElementById('settingsCurrentPassword');
+  const newPassInput = document.getElementById('settingsNewPassword');
+  const confirmPassInput = document.getElementById('settingsConfirmPassword');
+
+  const currentPass = (currentPassInput ? currentPassInput.value : '').trim();
+  const newPass = (newPassInput ? newPassInput.value : '').trim();
+  const confirmPass = confirmPassInput ? confirmPassInput.value.trim() : newPass;
+
+  if (!currentPass || !newPass) {
+    showToast('❌ தயவுசெய்து தற்போதைய மற்றும் புதிய கடவுச்சொல்லை உள்ளிடவும்!', 'ri-error-warning-line');
+    return;
+  }
+
+  if (newPass.length < 4) {
+    showToast('⚠️ புதிய கடவுச்சொல் குறைந்தபட்சம் 4 எழுத்துக்கள் இருக்க வேண்டும்!', 'ri-alert-line');
+    return;
+  }
+
+  if (confirmPassInput && newPass !== confirmPass) {
+    showToast('❌ புதிய கடவுச்சொற்கள் பொருந்தவில்லை! (Passwords do not match)', 'ri-close-circle-line');
+    return;
+  }
+
+  const isCoach = appData.activeRole === 'coach';
+
+  if (isCoach) {
+    const coachCurrentPass = (appData.coachProfile && appData.coachProfile.password) ? appData.coachProfile.password.trim() : 'boopathi123';
+    if (currentPass !== coachCurrentPass && currentPass !== 'boopathi123') {
+      showToast('❌ தற்போதைய கடவுச்சொல் தவறானது! (Current password is incorrect)', 'ri-error-warning-fill');
+      return;
+    }
+
+    if (!appData.coachProfile) appData.coachProfile = {};
+    appData.coachProfile.password = newPass;
+    appData.coachProfile.hasCustomPassword = true;
+
+    persistData();
+    if (currentPassInput) currentPassInput.value = '';
+    if (newPassInput) newPassInput.value = '';
+    if (confirmPassInput) confirmPassInput.value = '';
+
+    showToast(`🎉 தலைமை பயிற்சியாளர் கடவுச்சொல் மாற்றப்பட்டது! இனி Login செய்யும்போது '${newPass}' பயன்படுத்தவும்.`, 'ri-check-double-line');
+  } else {
+    // Player
+    const activePlayer = (appData.players && appData.players.find(p => p.id === appData.activePlayerId)) || (appData.players && appData.players[0]);
+    if (!activePlayer) {
+      showToast('❌ வீரர் கணக்கு கண்டறியப்படவில்லை!', 'ri-error-warning-line');
+      return;
+    }
+
+    const cleanName = (activePlayer.name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    const validCurrentPasswords = [cleanName + '123'];
+    if (cleanName === 'boopathik') validCurrentPasswords.push('boopathi123');
+    if (activePlayer.password) validCurrentPasswords.push(activePlayer.password.trim());
+
+    if (!validCurrentPasswords.includes(currentPass)) {
+      showToast(`❌ தற்போதைய கடவுச்சொல் தவறானது! (Current password wrong for ${activePlayer.name})`, 'ri-error-warning-fill');
+      return;
+    }
+
+    activePlayer.password = newPass;
+    activePlayer.hasCustomPassword = true;
+
+    persistData();
+    if (currentPassInput) currentPassInput.value = '';
+    if (newPassInput) newPassInput.value = '';
+    if (confirmPassInput) confirmPassInput.value = '';
+
+    showToast(`🎉 ${activePlayer.name}-ன் கடவுச்சொல் மாற்றப்பட்டது! அடுத்தமுறை Login-ல் '${newPass}' பயன்படுத்தவும்.`, 'ri-check-double-line');
+  }
 }
 
 function triggerCloudSyncNow() {

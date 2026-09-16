@@ -43,109 +43,130 @@
     <div id="particles3DContainer"></div>
   </div>
 
-  <!-- FULL SCREEN 3D GLASSMORPHIC LOGIN SCREEN -->
+  <!-- FULL SCREEN SPLIT HERO & GLASSMORPHIC LOGIN SCREEN (MATCHING MOCKUP) -->
   <div id="loginScreen" class="login-screen-overlay hidden">
-    <div class="login-card-3d">
-      <!-- Club Brand Header -->
-      <div class="login-logo-wrap">
-        <img src="assets/kabaddi_logo.jpg" alt="Logo" class="login-logo-img">
-        <h2 class="text-gradient-orange" style="font-size: 1.5rem; font-weight: 900; margin-bottom: 2px;">தாய் தமிழன்ஸ்</h2>
-        <div style="font-size: 0.76rem; font-weight: 800; color: var(--accent-gold); letter-spacing: 1.2px; text-transform: uppercase;">
-          THAAI TAMIZHANS KABADDI CLUB
+    <div class="login-split-container">
+      
+      <!-- LEFT HERO SIDE (DESKTOP & TABLET HERO) -->
+      <div class="login-hero-side">
+        <!-- Top Nav Tag -->
+        <div class="login-hero-topbar">
+          <div class="login-brand-badge">
+            <img src="assets/kabaddi_logo.jpg" alt="Logo" class="brand-mini-logo">
+            <span>KABADDI TEAM MANAGEMENT SYSTEM</span>
+          </div>
+          <div class="login-nav-motto">
+            Play • Practice • Improve • Win
+          </div>
         </div>
-        <p style="font-size: 0.80rem; color: #94a3b8; margin-top: 4px;">Official Squad & Coach Portal</p>
+
+        <!-- Center Hero Emblem & Typography -->
+        <div class="login-hero-center">
+          <div class="tiger-crest-wrap">
+            <img src="assets/kabaddi_logo.jpg" alt="Thaai Tamizhans Logo" class="tiger-crest-img">
+            <div class="crest-fire-aura"></div>
+          </div>
+          <h1 class="tiger-title-tamil">தாய் தமிழன்ஸ்</h1>
+          <div class="tiger-sub-ribbon">
+            <span>ஆவத்திபாளையம்</span>
+          </div>
+          <div class="tiger-motto-tag">
+            STRENGTH • STRATEGY • UNITY
+          </div>
+        </div>
+
+        <!-- Bottom Left Handwritten Tag -->
+        <div class="login-hero-footer">
+          <span class="kabaddi-script-tag">Kabaddi More Than a Game</span>
+        </div>
       </div>
 
-      <!-- Role Selection Tabs -->
-      <div class="login-tabs-nav">
-        <button type="button" class="login-tab-btn active" id="tabLoginCoach" onclick="switchLoginTab('coach')">
-          <i class="ri-user-star-fill"></i> Coach Login
-        </button>
-        <button type="button" class="login-tab-btn" id="tabLoginPlayer" onclick="switchLoginTab('player')">
-          <i class="ri-run-fill"></i> Player Login
-        </button>
+      <!-- RIGHT CARD SIDE (UNIFIED LOGIN FORM) -->
+      <div class="login-card-side">
+        <!-- Mobile Crest Header (Visible only on Mobile screens) -->
+        <div class="login-mobile-crest-header">
+          <img src="assets/kabaddi_logo.jpg" alt="Logo" class="mobile-tiger-logo">
+          <h2 class="mobile-tamil-title">தாய் தமிழன்ஸ்</h2>
+          <div class="mobile-sub-ribbon">ஆவத்திபாளையம்</div>
+          <div class="mobile-motto">STRENGTH • STRATEGY • UNITY</div>
+        </div>
+
+        <!-- Glassmorphic Form Card -->
+        <div class="unified-login-card" id="unifiedLoginCard">
+          <!-- Card Mini Brand Header -->
+          <div class="card-brand-header">
+            <img src="assets/kabaddi_logo.jpg" alt="Logo" class="card-mini-logo">
+            <div class="card-brand-text">
+              <div class="card-brand-title">தாய் தமிழன்ஸ் கபடி கழகம்</div>
+            </div>
+          </div>
+
+          <div class="card-header-block">
+            <h2 class="welcome-title">Portal Sign In <span class="wave-emoji">🏆</span></h2>
+          </div>
+
+          <!-- Error Alert Banner -->
+          <div id="loginErrorMessage" class="login-error-alert" style="display:none;"></div>
+
+          <!-- Unified Single Form -->
+          <form id="formUnifiedLogin" onsubmit="handleUnifiedLogin(event)">
+            <div class="form-group-unified">
+              <div class="input-icon-wrap">
+                <i class="ri-mail-line input-icon"></i>
+                <input type="email" id="loginUserEmail" class="unified-input" placeholder="Enter Coach or Player Gmail" required autocomplete="username">
+              </div>
+            </div>
+
+            <div class="form-group-unified">
+              <div class="input-icon-wrap">
+                <i class="ri-lock-line input-icon"></i>
+                <input type="password" id="loginPassword" class="unified-input" placeholder="Enter Password" required autocomplete="current-password">
+                <button type="button" class="eye-toggle-btn" onclick="toggleUnifiedPassword(this)" title="Toggle password visibility">
+                  <i class="ri-eye-line"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="login-options-row">
+              <label class="remember-me-label">
+                <input type="checkbox" id="loginRememberMe" checked>
+                <span class="lbl-txt">Remember me</span>
+              </label>
+              <a href="javascript:void(0)" class="forgot-pass-link" onclick="handleForgotPassword()">Need password help?</a>
+            </div>
+
+            <button type="submit" class="btn-gradient-login" id="btnLoginSubmit">
+              <span>LOGIN</span> <i class="ri-arrow-right-line"></i>
+            </button>
+
+            <!-- 4 Feature Pillars from Mockup -->
+            <div class="login-feature-pillars">
+              <div class="pillar-item">
+                <i class="ri-flashlight-fill pillar-icon"></i>
+                <div class="pillar-text">Train<br>Harder</div>
+              </div>
+              <div class="pillar-item">
+                <i class="ri-focus-3-fill pillar-icon"></i>
+                <div class="pillar-text">Play<br>Smarter</div>
+              </div>
+              <div class="pillar-item">
+                <i class="ri-team-fill pillar-icon"></i>
+                <div class="pillar-text">Stay<br>Together</div>
+              </div>
+              <div class="pillar-item">
+                <i class="ri-trophy-fill pillar-icon gold"></i>
+                <div class="pillar-text">Achieve<br>More</div>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Mobile Bottom Script Font -->
+        <div class="login-mobile-footer">
+          <span class="kabaddi-script-tag">Kabaddi More Than a Game</span>
+        </div>
       </div>
 
-      <!-- COACH LOGIN FORM -->
-      <form id="formCoachLogin" onsubmit="handleAuthLogin(event, 'coach')">
-        <div class="form-group">
-          <label><i class="ri-user-settings-line"></i> Coach Username / தொலைபேசி எண்</label>
-          <input type="text" class="form-control" id="coachLoginUsername" value="Coach Arun" placeholder="e.g. Coach Arun or 9876543210" required>
-        </div>
-        <div class="form-group">
-          <label><i class="ri-lock-password-line"></i> Security PIN / கடவுச்சொல்</label>
-          <div style="position:relative;">
-            <input type="password" class="form-control" id="coachLoginPin" value="1234" placeholder="Enter 4-digit PIN (default: 1234)" required style="padding-right: 40px;">
-            <button type="button" onclick="togglePasswordVisibility('coachLoginPin', this)" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:transparent; border:none; color:#94a3b8; cursor:pointer; font-size:1.1rem;">
-              <i class="ri-eye-line"></i>
-            </button>
-          </div>
-        </div>
-
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; font-size:0.80rem;">
-          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; color:#cbd5e1; margin:0;">
-            <input type="checkbox" id="coachRememberMe" checked style="accent-color:var(--accent-orange);"> Remember Me
-          </label>
-          <span style="color:var(--accent-cyan); cursor:pointer;" onclick="showToast('Default PIN for all accounts is 1234', 'ri-key-fill')">Default PIN: 1234</span>
-        </div>
-
-        <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:12px; font-size:0.95rem; font-weight:800; box-shadow:var(--theme-glow);">
-          <i class="ri-login-box-line"></i> Sign In as Coach / பயிற்சியாளர் உள்நுழை
-        </button>
-
-        <!-- Quick 1-Click Demo Coach Login -->
-        <div class="quick-login-pills-wrap">
-          <div style="font-size:0.75rem; color:#94a3b8; font-weight:700; margin-bottom:8px; text-transform:uppercase;">⚡ Quick 1-Click Fast Login:</div>
-          <div class="quick-login-chip" onclick="quickLogin('coach', 0)">
-            <span><i class="ri-shield-star-fill" style="color:var(--accent-orange);"></i> <b>Coach Arun</b> (Head Coach)</span>
-            <span style="color:var(--accent-cyan); font-size:0.75rem;">Instant Login →</span>
-          </div>
-        </div>
-      </form>
-
-      <!-- PLAYER LOGIN FORM -->
-      <form id="formPlayerLogin" onsubmit="handleAuthLogin(event, 'player')" style="display:none;">
-        <div class="form-group">
-          <label><i class="ri-user-smile-line"></i> Select Player / வீரரைத் தேர்வு செய்க</label>
-          <select class="form-control" id="playerLoginSelect" onchange="onPlayerLoginSelected(this.value)">
-            <!-- Dynamically populated with squad athletes -->
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label><i class="ri-lock-password-line"></i> Player PIN / கடவுச்சொல்</label>
-          <div style="position:relative;">
-            <input type="password" class="form-control" id="playerLoginPin" value="1234" placeholder="Enter 4-digit PIN (default: 1234)" required style="padding-right: 40px;">
-            <button type="button" onclick="togglePasswordVisibility('playerLoginPin', this)" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:transparent; border:none; color:#94a3b8; cursor:pointer; font-size:1.1rem;">
-              <i class="ri-eye-line"></i>
-            </button>
-          </div>
-        </div>
-
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; font-size:0.80rem;">
-          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; color:#cbd5e1; margin:0;">
-            <input type="checkbox" id="playerRememberMe" checked style="accent-color:var(--accent-cyan);"> Remember Me
-          </label>
-          <span style="color:var(--accent-cyan); cursor:pointer;" onclick="showToast('Default PIN for all players is 1234', 'ri-key-fill')">Default PIN: 1234</span>
-        </div>
-
-        <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:12px; font-size:0.95rem; font-weight:800; background:var(--grad-cyan); color:#000; box-shadow:0 0 20px rgba(0,242,254,0.4);">
-          <i class="ri-login-box-line"></i> Sign In as Player / வீரர் உள்நுழை
-        </button>
-
-        <!-- Quick 1-Click Demo Player Logins -->
-        <div class="quick-login-pills-wrap">
-          <div style="font-size:0.75rem; color:#94a3b8; font-weight:700; margin-bottom:8px; text-transform:uppercase;">⚡ Quick 1-Click Fast Login:</div>
-          <div class="quick-login-chip cyan" onclick="quickLogin('player', 1)">
-            <span><i class="ri-user-star-fill" style="color:var(--accent-cyan);"></i> <b>Boopathi K</b> (Jersey #06 - All-Rounder)</span>
-            <span style="color:var(--accent-cyan); font-size:0.75rem;">Login →</span>
-          </div>
-          <div class="quick-login-chip cyan" onclick="quickLogin('player', 2)">
-            <span><i class="ri-run-fill" style="color:var(--accent-orange);"></i> <b>Karthi S</b> (Jersey #07 - Lead Raider)</span>
-            <span style="color:var(--accent-cyan); font-size:0.75rem;">Login →</span>
-          </div>
-        </div>
-      </form>
     </div>
   </div>
 
@@ -270,7 +291,7 @@
         <div class="user-pill" onclick="navigateTo('profile')" title="View Profile">
           <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80" alt="User" class="user-avatar" id="topUserAvatar">
           <div style="text-align:left;">
-            <div class="user-name" id="topUserName">Coach Arun</div>
+            <div class="user-name" id="topUserName">Coach Boopathi</div>
             <div style="font-size:0.72rem; color:var(--accent-cyan); font-weight:700;" id="topUserRole">Head Coach</div>
           </div>
         </div>
@@ -488,7 +509,7 @@
 
         <div class="form-group">
           <label>Player Name</label>
-          <input type="text" class="form-control" id="newPlayerName" placeholder="e.g. Vikram" required>
+          <input type="text" class="form-control" id="newPlayerName" placeholder="e.g. Vikram" oninput="autoFillPlayerCredentials(this.value)" required>
         </div>
         <div class="form-group">
           <label>Jersey Number</label>
@@ -505,6 +526,16 @@
         <div class="form-group">
           <label>Contact Phone</label>
           <input type="text" class="form-control" id="newPlayerContact" placeholder="+91 90000 00000">
+        </div>
+        <div class="form-group">
+          <label><i class="ri-mail-line"></i> Player Email (Login Username / மின்னஞ்சல்)</label>
+          <input type="email" class="form-control" id="newPlayerEmail" placeholder="e.g. player.akash@gmail.com" readonly style="background:rgba(255,255,255,0.06); cursor:default; border-color:rgba(56,239,125,0.3);">
+          <small style="color:#38ef7d; font-size:0.75rem; display:block; margin-top:4px;">⚡ வீரர் பெயருக்கு ஏற்ப தானாக Gmail மாறும் (Auto-updated with Player Name)</small>
+        </div>
+        <div class="form-group">
+          <label><i class="ri-lock-line"></i> Player Password (கடவுச்சொல்)</label>
+          <input type="text" class="form-control" id="newPlayerPassword" placeholder="e.g. akash123" readonly style="background:rgba(255,255,255,0.06); cursor:default; border-color:rgba(56,239,125,0.3);">
+          <small style="color:#38ef7d; font-size:0.75rem; display:block; margin-top:4px;">⚡ வீரர் பெயருக்கு ஏற்ப கடவுச்சொல் தானாக மாறும் (Auto-updated: [name]123)</small>
         </div>
         <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:24px;">
           <button type="button" class="btn btn-outline" onclick="closeModal('modalAddPlayer')">Cancel</button>
@@ -995,6 +1026,25 @@
             <i class="ri-whatsapp-fill"></i> WhatsAppla Share Pannu
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: View All 16 Players & Coach Credentials Helper -->
+  <div class="modal-overlay" id="modalAllCredentials">
+    <div class="modal-card" style="max-width:820px; max-height:90vh; overflow-y:auto;">
+      <div class="modal-header">
+        <h3 class="text-gradient-cyan"><i class="ri-shield-user-fill"></i> 📋 Official Login Credentials (அதிகாரப்பூர்வ கணக்குகள்)</h3>
+        <button class="modal-close" onclick="closeCredentialsModal()">&times;</button>
+      </div>
+      <div style="padding:16px 20px;">
+        <div style="font-size:0.86rem; color:#cbd5e1; margin-bottom:16px; background:rgba(0,242,254,0.06); border:1px solid rgba(0,242,254,0.2); border-radius:8px; padding:10px 14px;">
+          💡 <b>விளக்கம்:</b> Coach account கொடுத்தால் <b>Coach Dashboard</b> திறக்கும். Player account கொடுத்தால் அவர்களின் <b>Player Dashboard</b> திறக்கும். ஏதேனும் கணக்கின் மீது <b>⚡ Fill</b> அல்லது <b>⚡ Use Account</b> கொடுத்தால் அது தானாகவே Login-ல் நிரப்பப்படும்.
+        </div>
+        <div id="allCredentialsList"></div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; padding:12px 20px; border-top:1px solid var(--glass-border);">
+        <button type="button" class="btn btn-outline" onclick="closeCredentialsModal()">Close (மூடு)</button>
       </div>
     </div>
   </div>
