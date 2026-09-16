@@ -7,6 +7,17 @@
       try {
         var t = localStorage.getItem('thaai_tamizhans_theme') || '3d-kabaddi-arena';
         document.documentElement.setAttribute('data-theme', t);
+
+        // Instant Zero-Flash Auth Check (Hides login screen before any pixel paints)
+        var s = localStorage.getItem('thaai_tamizhans_auth_session') || sessionStorage.getItem('thaai_tamizhans_auth_session');
+        var isLoggedOut = localStorage.getItem('thaai_tamizhans_logged_out') === 'true';
+        var isForceLogin = window.location.search.indexOf('login=true') !== -1 || window.location.hash === '#login';
+        if (s && !isLoggedOut && !isForceLogin) {
+          var p = JSON.parse(s);
+          if (p && p.role) {
+            document.documentElement.classList.add('is-authenticated');
+          }
+        }
       } catch(e) {}
     })();
   </script>
@@ -44,7 +55,7 @@
   </div>
 
   <!-- FULL SCREEN SPLIT HERO & GLASSMORPHIC LOGIN SCREEN (MATCHING MOCKUP) -->
-  <div id="loginScreen" class="login-screen-overlay">
+  <div id="loginScreen" class="login-screen-overlay hidden">
     <div class="login-split-container">
       
       <!-- LEFT HERO SIDE (DESKTOP & TABLET HERO) -->

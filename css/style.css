@@ -5518,8 +5518,30 @@ h1, h2, h3, h4, h5, h6 {
   background: #050811;
 }
 
-.login-screen-overlay.hidden {
+/* 🚀 ZERO-FLICKER: If authenticated session exists, instantly hide login screen without any paint, flash, or transition */
+html.is-authenticated #loginScreen,
+html.is-authenticated .login-screen-overlay:not(.force-show) {
   display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transition: none !important;
+}
+
+.login-screen-overlay.force-show {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+.login-screen-overlay.hidden,
+#loginScreen.hidden {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transition: none !important;
 }
 
 .login-split-container {

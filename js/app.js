@@ -22,6 +22,13 @@ document.addEventListener('DOMContentLoaded', () => {
   setupGlobalPasteHandler();
 });
 
+window.addEventListener('hashchange', () => {
+  const hash = window.location.hash ? window.location.hash.substring(1) : '';
+  if (hash && hash !== 'login' && hash !== currentView) {
+    navigateTo(hash);
+  }
+});
+
 // ----------------------------------------------------
 // 0. AUTHENTICATION & LOGIN SCREEN SYSTEM (UNIFIED MULTI-ROLE)
 // ----------------------------------------------------
@@ -37,7 +44,9 @@ function initAuth() {
     localStorage.removeItem('thaai_tamizhans_auth_session');
     sessionStorage.removeItem('thaai_tamizhans_auth_session');
     localStorage.setItem('thaai_tamizhans_logged_out', 'true');
+    document.documentElement.classList.remove('is-authenticated');
     if (loginScreen) {
+      loginScreen.classList.add('force-show');
       loginScreen.classList.remove('hidden');
     }
     return;
@@ -47,20 +56,29 @@ function initAuth() {
     try {
       const session = JSON.parse(savedSession);
       if (session && session.role) {
+        document.documentElement.classList.add('is-authenticated');
         appData.activeRole = session.role;
+
+        // Honor URL hash or saved view so refreshing always stays on the same page
+        const hashView = (window.location.hash && window.location.hash.length > 1) ? window.location.hash.substring(1) : null;
         const savedView = localStorage.getItem('thaai_tamizhans_current_view');
 
         if (session.role === 'player' && session.playerId) {
           appData.activePlayerId = session.playerId;
         }
 
-        if (savedView) {
+        if (hashView && hashView !== 'login') {
+          currentView = hashView;
+        } else if (savedView) {
           currentView = savedView;
         } else {
           currentView = (session.role === 'coach') ? 'coach-dashboard' : 'player-dashboard';
         }
 
+        localStorage.setItem('thaai_tamizhans_current_view', currentView);
+
         if (loginScreen) {
+          loginScreen.classList.remove('force-show');
           loginScreen.classList.add('hidden');
         }
         return;
@@ -71,7 +89,9 @@ function initAuth() {
   }
 
   // If no valid session or user logged out, display unified login screen
+  document.documentElement.classList.remove('is-authenticated');
   if (loginScreen) {
+    loginScreen.classList.add('force-show');
     loginScreen.classList.remove('hidden');
   }
 }
@@ -320,7 +340,11 @@ function handleUnifiedLogin(e) {
       localStorage.removeItem('thaai_tamizhans_logged_out');
 
       appData.activeRole = 'coach';
-      if (loginScreen) loginScreen.classList.add('hidden');
+      document.documentElement.classList.add('is-authenticated');
+      if (loginScreen) {
+        loginScreen.classList.remove('force-show');
+        loginScreen.classList.add('hidden');
+      }
       switchRole('coach');
       showToast(`👑 Welcome Back, Coach Boopathi! Coach Dashboard திறக்கப்பட்டது.`);
       return;
@@ -406,8 +430,11 @@ function handleUnifiedLogin(e) {
 
       appData.activeRole = 'player';
       appData.activePlayerId = matchedPlayer.id;
-
-      if (loginScreen) loginScreen.classList.add('hidden');
+      document.documentElement.classList.add('is-authenticated');
+      if (loginScreen) {
+        loginScreen.classList.remove('force-show');
+        loginScreen.classList.add('hidden');
+      }
       switchRole('player');
       showToast(`🏃 Welcome, ${matchedPlayer.name} (Jersey ${matchedPlayer.jersey})! Player Dashboard திறக்கப்பட்டது.`);
       return;
@@ -426,6 +453,10 @@ function handleUserLogout() {
     localStorage.removeItem('thaai_tamizhans_auth_session');
     sessionStorage.removeItem('thaai_tamizhans_auth_session');
     localStorage.setItem('thaai_tamizhans_logged_out', 'true');
+    document.documentElement.classList.remove('is-authenticated');
+    try {
+      history.replaceState(null, '', window.location.pathname);
+    } catch(e) {}
     
     const loginScreen = document.getElementById('loginScreen');
     const emailInput = document.getElementById('loginUserEmail');
@@ -440,6 +471,7 @@ function handleUserLogout() {
     }
 
     if (loginScreen) {
+      loginScreen.classList.add('force-show');
       loginScreen.classList.remove('hidden');
     }
     showToast('👋 Logged out successfully! Sign in to continue.', 'ri-logout-circle-line');
@@ -1741,6 +1773,9 @@ function renderAppShell() {
 function navigateTo(viewKey) {
   currentView = viewKey;
   localStorage.setItem('thaai_tamizhans_current_view', viewKey);
+  try {
+    history.replaceState(null, '', '#' + viewKey);
+  } catch(e) {}
   
   syncSidebarActiveState();
   renderCurrentView();
@@ -1770,6 +1805,9 @@ function renderCurrentView() {
   
   // Persist validated current view so refreshing page ALWAYS stays on the same page
   localStorage.setItem('thaai_tamizhans_current_view', currentView);
+  try {
+    history.replaceState(null, '', '#' + currentView);
+  } catch(e) {}
   syncSidebarActiveState();
   
   switch(currentView) {
