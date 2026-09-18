@@ -24,7 +24,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🏆 தாய் தமிழன்ஸ் (THAAI TAMIZHANS) — Official Portal</title>
   
+  <!-- PWA & Mobile Web App Manifest -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#ff6b00">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="தாய் தமிழன்ஸ்">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/icon-180.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="assets/icons/icon-152.png">
+  <link rel="apple-touch-icon" sizes="128x128" href="assets/icons/icon-128.png">
+
   <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
   <link rel="icon" type="image/jpeg" href="assets/kabaddi_logo.jpg">
   
   <!-- Google Fonts: Rajdhani, Mukta Malar, Outfit, Plus Jakarta Sans, Dancing Script -->
@@ -36,8 +49,9 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
   
-  <!-- Custom Styles -->
+  <!-- Custom Styles & PWA UI -->
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/pwa.css">
 </head>
 <body>
 
@@ -169,6 +183,11 @@
                 <div class="pillar-text">Achieve<br>More</div>
               </div>
             </div>
+
+            <!-- Install to Mobile Button on Login Screen -->
+            <button type="button" class="btn-login-pwa-install" id="btnLoginPwaInstall" onclick="triggerPWAInstall()">
+              <i class="ri-smartphone-line"></i> <span>📲 போனில் இன்ஸ்டால் செய் (Add to Home Screen)</span>
+            </button>
           </form>
         </div>
 
@@ -197,6 +216,11 @@
       </div>
 
       <div class="top-actions">
+        <!-- PWA Mobile Install Pill -->
+        <button class="btn-topbar-pwa" id="btnHeaderPwaInstall" onclick="triggerPWAInstall()" title="Install Thaai Tamizhans App on your phone">
+          <i class="ri-download-cloud-2-line"></i> <span>📲 Install App</span>
+        </button>
+
         <!-- Theme Selector (10 Visual & 3D Animated Themes) -->
         <div class="theme-picker-wrap">
           <button class="theme-btn" id="themePickerBtn" onclick="toggleThemeMenu()" title="Theme Matru / Change Theme">
@@ -341,6 +365,7 @@
 
       <div class="nav-section-label">ACCOUNT</div>
       <ul class="nav-menu">
+        <li class="nav-item pwa-sidebar-install-item" style="display:none;"><button onclick="triggerPWAInstall()" style="color:#ffaa55;"><i class="ri-smartphone-line"></i> <span>📱 போனில் நிறுவு (Home Screen)</span></button></li>
         <li class="nav-item"><button onclick="navigateTo('profile')"><i class="ri-user-settings-line"></i> <span>👤 My Profile</span></button></li>
         <li class="nav-item"><button onclick="navigateTo('settings')"><i class="ri-settings-4-line"></i> <span>⚙️ Settings</span></button></li>
         <li class="nav-item"><button onclick="handleUserLogout()" style="color:var(--accent-red);"><i class="ri-logout-box-r-line"></i> <span>🚪 Logout (வெளியேறு)</span></button></li>
@@ -379,6 +404,7 @@
 
       <div class="nav-section-label">ACCOUNT</div>
       <ul class="nav-menu">
+        <li class="nav-item pwa-sidebar-install-item" style="display:none;"><button onclick="triggerPWAInstall()" style="color:#ffaa55;"><i class="ri-smartphone-line"></i> <span>📱 போனில் நிறுவு (Home Screen)</span></button></li>
         <li class="nav-item"><button onclick="navigateTo('profile')"><i class="ri-user-3-line"></i> <span>👤 My Profile</span></button></li>
         <li class="nav-item"><button onclick="navigateTo('settings')"><i class="ri-settings-4-line"></i> <span>⚙️ Settings</span></button></li>
         <li class="nav-item"><button onclick="handleUserLogout()" style="color:var(--accent-red);"><i class="ri-logout-box-r-line"></i> <span>🚪 Logout (வெளியேறு)</span></button></li>
@@ -1060,6 +1086,95 @@
     </div>
   </div>
 
+  <!-- PWA Mobile Floating Install Banner -->
+  <div class="pwa-install-banner" id="pwaInstallBanner">
+    <div class="pwa-banner-left">
+      <img src="assets/icons/icon-96.png" alt="App Icon" class="pwa-banner-icon">
+      <div class="pwa-banner-text">
+        <span class="pwa-banner-title">தாய் தமிழன்ஸ் ஆப் 🏆</span>
+        <span class="pwa-banner-sub">போன் முகப்புத் திரையில் சேர்க்கவும் (Home Screen)</span>
+      </div>
+    </div>
+    <div class="pwa-banner-actions">
+      <button type="button" class="btn-pwa-install" onclick="triggerPWAInstall()">
+        <i class="ri-download-2-line"></i> <span>நிறுவு</span>
+      </button>
+      <button type="button" class="btn-pwa-dismiss" onclick="dismissPwaBanner()" title="Close">&times;</button>
+    </div>
+  </div>
+
+  <!-- Modal: iOS Add to Home Screen Instructions -->
+  <div class="pwa-modal-overlay" id="modalPwaIosGuide" onclick="if(event.target===this) closePwaIosModal()">
+    <div class="pwa-modal-card">
+      <div class="pwa-modal-header">
+        <div class="pwa-modal-title">
+          <i class="ri-apple-fill" style="color:#ffffff; font-size:1.3rem;"></i>
+          <span>iPhone / iPad-ல் சேர்க்கும் முறை</span>
+        </div>
+        <button type="button" class="btn-pwa-dismiss" onclick="closePwaIosModal()">&times;</button>
+      </div>
+      <div class="pwa-modal-body">
+        <div class="pwa-step-box">
+          <div class="pwa-step-num">1</div>
+          <div class="pwa-step-desc">
+            Safari பிரவுசரின் கீழேயுள்ள <b>பகிர் பட்டனை (Share Button <i class="ri-share-box-line"></i>)</b> தொடவும்.
+          </div>
+        </div>
+        <div class="pwa-step-box">
+          <div class="pwa-step-num">2</div>
+          <div class="pwa-step-desc">
+            மெனுவை கீழே உருட்டி <b>"Add to Home Screen" (முகப்புத் திரையில் சேர் ➕)</b> என்பதைத் தேர்ந்தெடுக்கவும்.
+          </div>
+        </div>
+        <div class="pwa-step-box">
+          <div class="pwa-step-num">3</div>
+          <div class="pwa-step-desc">
+            மேல் வலது மூலையில் உள்ள <b>"Add"</b> என்பதைத் தொடவும். இப்போது உங்கள் போனில் தாய் தமிழன்ஸ் ஆப் தயாராகிவிடும்!
+          </div>
+        </div>
+      </div>
+      <div class="pwa-modal-footer">
+        <button type="button" class="btn btn-primary" style="padding:8px 20px;" onclick="closePwaIosModal()">புரிந்தது (Done)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Android / Desktop Add to Home Screen Instructions -->
+  <div class="pwa-modal-overlay" id="modalPwaAndroidGuide" onclick="if(event.target===this) closePwaAndroidModal()">
+    <div class="pwa-modal-card">
+      <div class="pwa-modal-header">
+        <div class="pwa-modal-title">
+          <i class="ri-android-fill" style="color:#00ff88; font-size:1.3rem;"></i>
+          <span>போனில் இன்ஸ்டால் செய்யும் முறை</span>
+        </div>
+        <button type="button" class="btn-pwa-dismiss" onclick="closePwaAndroidModal()">&times;</button>
+      </div>
+      <div class="pwa-modal-body">
+        <div class="pwa-step-box">
+          <div class="pwa-step-num">1</div>
+          <div class="pwa-step-desc">
+            Chrome பிரவுசரின் மேல் வலது மூலையில் உள்ள <b>3 புள்ளிகள் மெனுவை (⋮)</b> அழுத்தவும்.
+          </div>
+        </div>
+        <div class="pwa-step-box">
+          <div class="pwa-step-num">2</div>
+          <div class="pwa-step-desc">
+            மெனுவில் உள்ள <b>"Install app"</b> அல்லது <b>"Add to Home screen" (முகப்புத் திரையில் சேர்)</b> என்பதைத் தொடவும்.
+          </div>
+        </div>
+        <div class="pwa-step-box">
+          <div class="pwa-step-num">3</div>
+          <div class="pwa-step-desc">
+            உறுதிப்படுத்த <b>"Install" (நிறுவு)</b> என்பதை அழுத்தினால், உங்கள் மொபைல் மெனுவில் ஆப் தனியாகத் தோன்றும்!
+          </div>
+        </div>
+      </div>
+      <div class="pwa-modal-footer">
+        <button type="button" class="btn btn-primary" style="padding:8px 20px;" onclick="closePwaAndroidModal()">புரிந்தது (Done)</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Firebase Real-Time Cloud SDK (Compat ES5/ES6) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -1071,5 +1186,7 @@
 
   <script src="js/data.js"></script>
   <script src="js/app.js"></script>
+  <!-- PWA Add to Home Screen Manager -->
+  <script src="js/pwa-install.js"></script>
 </body>
 </html>

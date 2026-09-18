@@ -1,0 +1,293 @@
+/* 🏆 தாய் தமிழன்ஸ் கபடி கழகம் — PWA & Mobile Add to Home Screen Styles */
+
+/* 1. Mobile Floating Install Banner */
+.pwa-install-banner {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(140%);
+  width: calc(100% - 28px);
+  max-width: 480px;
+  background: linear-gradient(135deg, rgba(16, 22, 40, 0.96) 0%, rgba(8, 12, 24, 0.98) 100%);
+  border: 1.5px solid rgba(255, 107, 0, 0.55);
+  border-radius: 18px;
+  padding: 12px 16px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 107, 0, 0.25);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 999999;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pwa-install-banner.visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pwa-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.pwa-banner-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  border: 2px solid #ff6b00;
+  box-shadow: 0 0 12px rgba(255, 107, 0, 0.6);
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.pwa-banner-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pwa-banner-title {
+  font-family: 'Mukta Malar', 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pwa-banner-sub {
+  font-size: 0.75rem;
+  color: #ffaa55;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pwa-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-pwa-install {
+  background: linear-gradient(135deg, #ff6b00 0%, #ff2a5f 100%);
+  color: #ffffff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-family: 'Rajdhani', 'Outfit', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 15px rgba(255, 107, 0, 0.45);
+  transition: all 0.2s ease;
+  animation: pulsePwaBtn 2.2s infinite ease-in-out;
+}
+
+.btn-pwa-install:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 6px 20px rgba(255, 107, 0, 0.65);
+}
+
+.btn-pwa-dismiss {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94a3b8;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.btn-pwa-dismiss:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+@keyframes pulsePwaBtn {
+  0% { box-shadow: 0 4px 15px rgba(255, 107, 0, 0.45); }
+  50% { box-shadow: 0 4px 25px rgba(255, 107, 0, 0.8), 0 0 10px rgba(255, 42, 95, 0.6); }
+  100% { box-shadow: 0 4px 15px rgba(255, 107, 0, 0.45); }
+}
+
+/* 2. Topbar Install Pill */
+.btn-topbar-pwa {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.2) 0%, rgba(255, 42, 95, 0.15) 100%);
+  border: 1px solid rgba(255, 107, 0, 0.5);
+  border-radius: 20px;
+  color: #ff9d42;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.btn-topbar-pwa:hover {
+  background: linear-gradient(135deg, #ff6b00 0%, #ff2a5f 100%);
+  color: #ffffff;
+  box-shadow: 0 0 15px rgba(255, 107, 0, 0.5);
+}
+
+/* 3. Login Screen Install Button */
+.btn-login-pwa-install {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: rgba(255, 107, 0, 0.12);
+  border: 1px dashed rgba(255, 107, 0, 0.5);
+  border-radius: 12px;
+  color: #ffaa55;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.btn-login-pwa-install:hover {
+  background: rgba(255, 107, 0, 0.22);
+  border-color: #ff6b00;
+  color: #ffffff;
+}
+
+/* 4. Guide Modals (iOS & Android) */
+.pwa-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 7, 16, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1000000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.pwa-modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pwa-modal-card {
+  background: linear-gradient(180deg, #101728 0%, #080c16 100%);
+  border: 1.5px solid rgba(0, 242, 254, 0.3);
+  border-radius: 22px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 35px rgba(0, 242, 254, 0.2);
+  overflow: hidden;
+  animation: pwaModalPop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes pwaModalPop {
+  0% { transform: scale(0.88) translateY(20px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.pwa-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pwa-modal-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pwa-modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pwa-step-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.pwa-step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff6b00, #ff2a5f);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pwa-step-desc {
+  font-size: 0.88rem;
+  color: #e2e8f0;
+  line-height: 1.45;
+}
+
+.pwa-step-desc b {
+  color: #ffaa55;
+}
+
+.pwa-modal-footer {
+  padding: 14px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Hide install banners if app is already running standalone */
+body.pwa-standalone-mode .pwa-install-banner,
+body.pwa-standalone-mode .btn-topbar-pwa,
+body.pwa-standalone-mode .btn-login-pwa-install,
+body.pwa-standalone-mode .pwa-sidebar-install-item {
+  display: none !important;
+}
